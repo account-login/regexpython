@@ -233,77 +233,19 @@ def nfa_labelize(nfa):
     rec(start)
 
 
-class DfaState:
-    def __init__(self, set_to_state, end):
-        """
-        :type set_to_state: dict[set[NfaState], DfaState]
-        """
+class CharToSet:
+    def __init__(self):
         self.chars = dict()
         self.not_accept = set()
         self.other = set()
-        self.set_to_state = set_to_state
-        self.end = end
-        self.states = set()
 
-    def __repr__(self):
-        return repr(self.states)
-
-    def to_graphviz(self):
-        return dfa_to_gv(self)
-
-    @classmethod
-    def from_nfa(cls, nfa):
-        """
-        :type nfa: (NfaState, NfaState)
-        """
-        start, end = nfa
-        set_to_state = dict()
-        start_dfa = None
-
-        q = deque([ ε_closure({ start }) ])
-        while q:
-            dfa_state = cls(set_to_state, end)
-            dfa_state.states = q.popleft()
-            start_dfa = start_dfa or dfa_state
-
-            for nfa in dfa_state.states:    # type: NfaState
-                if nfa.char is not None:
-                    dfa_state.add_char(nfa.char, nfa.to)
-                elif nfa.not_char is not None:
-                    dfa_state.add_not_char(nfa.not_char, nfa.other)
-                elif nfa.other:
-                    dfa_state.add_other(nfa.other)
-
-            dfa_state.freeze()
-            set_to_state[dfa_state.states] = dfa_state
-
-            for nfas in dfa_state.chars.values():
-                if nfas not in set_to_state:
-                    q.append(nfas)
-            if dfa_state.other and dfa_state.other not in set_to_state:
-                q.append(dfa_state.other)
-
-        return start_dfa
-
-    def follow(self, char):
+    def get(self, char):
         if char in self.chars:
-            return self.set_to_state[self.chars[char]]
+            return self.chars[char]
         elif char in self.not_accept:
             return None
-        elif self.other:
-            return self.set_to_state[self.other]
         else:
-            return None
-
-    def is_end(self):
-        return self.end in self.states
-
-    def freeze(self):
-        for ch, sset in self.chars.items():
-            self.chars[ch] = frozenset(ε_closure(sset))
-        self.not_accept = frozenset(self.not_accept)
-        self.other = frozenset(ε_closure(self.other))
-        self.states = frozenset(self.states)
+            return self.other
 
     def add_char(self, char, dest):
         if char in self.not_accept:
@@ -351,6 +293,77 @@ class DfaState:
             self.chars[ch] = { other }
         self.not_accept = set()
 
+    def freeze(self):
+        for ch, sset in self.chars.items():
+            self.chars[ch] = frozenset(ε_closure(sset))
+        self.not_accept = frozenset(self.not_accept)
+        self.other = frozenset(ε_closure(self.other))
+
+
+class DfaState:
+    def __init__(self, set_to_state, end):
+        """
+        :type set_to_state: dict[set[NfaState], DfaState]
+        """
+        self.char_to_set = CharToSet()
+        self.set_to_state = set_to_state
+        self.end = end
+        self.states = set()
+
+    def __repr__(self):
+        return repr(self.states)
+
+    def to_graphviz(self):
+        return dfa_to_gv(self)
+
+    @classmethod
+    def from_nfa(cls, nfa):
+        """
+        :type nfa: (NfaState, NfaState)
+        """
+        start, end = nfa
+        set_to_state = dict()
+        start_dfa = None
+
+        q = deque([ ε_closure({ start }) ])
+        while q:
+            dfa_state = cls(set_to_state, end)
+            dfa_state.states = q.popleft()
+            start_dfa = start_dfa or dfa_state
+
+            for nfa in dfa_state.states:    # type: NfaState
+                if nfa.char is not None:
+                    dfa_state.char_to_set.add_char(nfa.char, nfa.to)
+                elif nfa.not_char is not None:
+                    dfa_state.char_to_set.add_not_char(nfa.not_char, nfa.other)
+                elif nfa.other:
+                    dfa_state.char_to_set.add_other(nfa.other)
+
+            dfa_state.freeze()
+            set_to_state[dfa_state.states] = dfa_state
+
+            for nfas in dfa_state.char_to_set.chars.values():
+                if nfas not in set_to_state:
+                    q.append(nfas)
+            if dfa_state.char_to_set.other and dfa_state.char_to_set.other not in set_to_state:
+                q.append(dfa_state.char_to_set.other)
+
+        return start_dfa
+
+    def follow(self, char):
+        nfas = self.char_to_set.get(char)
+        if nfas:
+            return self.set_to_state[nfas]
+        else:
+            return None
+
+    def is_end(self):
+        return self.end in self.states
+
+    def freeze(self):
+        self.char_to_set.freeze()
+        self.states = frozenset(self.states)
+
 
 def dfa_to_gv(dfa_start: DfaState):
     g = graphviz.Digraph()
@@ -373,17 +386,17 @@ def dfa_to_gv(dfa_start: DfaState):
 
     for dfa in dfa_start.set_to_state.values():
         name = nfas2name[dfa.states]
-        for ch, to in dfa.chars.items():
+        for ch, to in dfa.char_to_set.chars.items():
             g.edge(name, nfas2name[to], ch)
 
-        for not_char in dfa.not_accept:
+        for not_char in dfa.char_to_set.not_accept:
             if not has_fail_node:
                 g.node('FAIL', color='red', fontcolor='white')
                 has_fail_node = True
             g.edge(name, 'FAIL', not_char)
 
-        if dfa.other:
-            g.edge(name, nfas2name[dfa.other], 'other')
+        if dfa.char_to_set.other:
+            g.edge(name, nfas2name[dfa.char_to_set.other], 'other')
 
     return g
 
