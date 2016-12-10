@@ -21,7 +21,7 @@ class BaseNode:
 
     def to_graphiviz(self):
         g = graphviz.Digraph()
-        g.attr('node', width='0', height='0', shape='box', fontname='fira')
+        g.attr('node', width='0', height='0', shape='box', fontname='Fira Code')
         self._add_to_gv(g, make_serial())
         return g
 
@@ -97,7 +97,7 @@ def nfa_to_gv(nfa, labelize=True):
 
     start, end = nfa
     g = graphviz.Digraph()
-    g.attr('node', style='filled', width='0', height='0', shape='box', fontname='fira')
+    g.attr('node', style='filled', width='0', height='0', shape='box', fontname='Fira Code')
 
     if start is end:
         g.node(start.label, 'START & END', color='gray')
@@ -367,7 +367,7 @@ class DfaState:
 
 def dfa_to_gv(dfa_start: DfaState):
     g = graphviz.Digraph()
-    g.attr('node', style='filled', width='0', height='0', shape='box', fontname='fira')
+    g.attr('node', style='filled', width='0', height='0', shape='box', fontname='Fira Code')
     has_fail_node = False
 
     nfas2name = dict()
