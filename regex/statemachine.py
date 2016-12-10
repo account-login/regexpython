@@ -118,11 +118,11 @@ def regex_to_nfa(re):
 
         return start, e
     elif isinstance(re, Or):
-        s1, e1 = regex_to_nfa(re.children[0])
-        s2, e2 = regex_to_nfa(re.children[1])
-        start = NfaState(epsilon={ s1, s2 })
+        assert len(re.children) > 0
+        start = NfaState()
         end = NfaState()
-        for e in (e1, e2):
+        for s, e in map(regex_to_nfa, re.children):
+            start.epsilon.add(s)
             e.epsilon.add(end)
 
         return start, end
