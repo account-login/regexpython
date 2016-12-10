@@ -182,6 +182,7 @@ def parse_cat(tokens: TokenGen):
     if len(cats) == 0:
         return Empty()
     elif len(cats) == 1:
+        # unnecessary optimization
         return cats[0]
     else:
         return Cat(*cats)
