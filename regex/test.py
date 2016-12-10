@@ -14,16 +14,16 @@ def test_paser():
     ast = regex_from_string('^ab(a||b|)*|c$')
     expected = Or(
         Cat(
-            Token.BEGIN,
-            'a',
-            'b',
+            Char(Token.BEGIN),
+            Char('a'),
+            Char('b'),
             Star(
-                Or('a', Empty(), 'b', Empty())
+                Or(Char('a'), Empty(), Char('b'), Empty())
             )
         ),
         Cat(
-            'c',
-            Token.END,
+            Char('c'),
+            Char(Token.END),
         ),
     )
 

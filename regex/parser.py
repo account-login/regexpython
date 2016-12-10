@@ -169,14 +169,14 @@ def parse_cat(tokens: TokenGen):
             cats.append(Dot())
             eat_token(tokens, ch)
         elif ch in (Token.BEGIN, Token.END):
-            cats.append(ch)
+            cats.append(Char(ch))
             eat_token(tokens, ch)
         elif isinstance(ch, Token):
             assert ch in (Token.RBRACKET, Token.NOT)
             raise UnexpectedToken(ch)
         else:
             assert isinstance(ch, str) and len(ch) == 1
-            cats.append(ch)
+            cats.append(Char(ch))
             eat_token(tokens, ch)
 
     if len(cats) == 0:
