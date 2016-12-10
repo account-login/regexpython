@@ -36,6 +36,13 @@ class TokenGen:
     def unget(self, item):
         self.buffer.append(item)
 
+    def eat(self, expect=None):
+        tok = self.get()
+        if expect is not None and tok != expect:
+            raise UnexpectedToken(got=tok, expect=expect)
+        if tok is Token.EOF:
+            raise UnexpectedEOF
+
 
 class Token(AutoNumber):
     OR = ()
@@ -118,18 +125,10 @@ class UnexpectedToken(ParseError):
                     expect=self.expect, got=self.got)
 
 
-def eat_token(tokens: TokenGen, expect=None):
-    tok = tokens.get()
-    if expect is not None and tok != expect:
-        raise UnexpectedToken(expect, tok)
-    if tok is Token.EOF:
-        raise UnexpectedEOF
-
-
 def parse_par(tokens: TokenGen):
-    eat_token(tokens, Token.LPAR)
+    tokens.eat(Token.LPAR)
     ret = parse_exp(tokens)
-    eat_token(tokens, Token.RPAR)
+    tokens.eat(Token.RPAR)
     return ret
 
 
@@ -151,24 +150,24 @@ def parse_cat(tokens: TokenGen):
             cats.append(parse_bra(tokens))
         elif ch is Token.STAR:
             if not cats:
-                raise UnexpectedToken(ch)
+                raise UnexpectedToken(got=ch)
             if isinstance(cats[-1], Star):
                 raise ParseError('mutiple repeat')
             cats[-1] = Star(cats[-1])
-            eat_token(tokens, ch)
+            tokens.eat(ch)
         elif ch is Token.DOT:
             cats.append(Dot())
-            eat_token(tokens, ch)
+            tokens.eat(ch)
         elif ch in (Token.BEGIN, Token.END):
             cats.append(Char(ch))
-            eat_token(tokens, ch)
+            tokens.eat(ch)
         elif isinstance(ch, Token):
             assert ch in (Token.RBRACKET, Token.NOT)
-            raise UnexpectedToken(ch)
+            raise UnexpectedToken(got=ch)
         else:
             assert isinstance(ch, str) and len(ch) == 1
             cats.append(Char(ch))
-            eat_token(tokens, ch)
+            tokens.eat(ch)
 
     if len(cats) == 0:
         return Empty()
@@ -188,7 +187,7 @@ def parse_exp(tokens: TokenGen):
         if ch is Token.EOF:
             break
         elif ch is Token.OR:
-            eat_token(tokens, Token.OR)
+            tokens.eat(Token.OR)
         elif ch is Token.RPAR:
             break
         else:
@@ -206,7 +205,7 @@ def parse(tokens: TokenGen):
     exp = parse_exp(tokens)
     tok = tokens.peek()
     if tok is not Token.EOF:
-        raise UnexpectedToken(tok)
+        raise UnexpectedToken(got=tok)
     else:
         return exp
 
