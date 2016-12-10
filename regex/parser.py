@@ -146,7 +146,25 @@ def parse_par(tokens: TokenGen):
 
 
 def parser_bracket(tokens: TokenGen):
-    pass
+    tokens.eat(Token.LBRACKET)
+    tok = tokens.peek()
+    if tok is Token.NOT:
+        raise NotImplementedError
+    else:
+        ors = []
+        while True:
+            tok = tokens.get()
+            if tok is Token.RBRACKET:
+                if len(ors) == 0:
+                    return Empty
+                else:
+                    return Or(*ors)
+            elif tok is Token.EOF:
+                raise UnexpectedToken(got=tok, expect=Token.RBRACKET)
+            elif isinstance(tok, str):
+                ors.append(Char(tok))
+            else:
+                raise NotImplementedError
 
 
 def parse_cat(tokens: TokenGen):
