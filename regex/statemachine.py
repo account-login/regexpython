@@ -1,90 +1,8 @@
-import itertools
 from collections import deque
 from itertools import chain
 import graphviz
 
-
-def make_serial():
-    gen = itertools.count()
-    return lambda: next(gen)
-
-
-class BaseNode:
-    def __init__(self, *children):
-        """
-        :type children: tuple[BaseNode|str]
-        """
-        self.children = children
-
-    def _repr_svg_(self):
-        return self.to_graphiviz()._repr_svg_()
-
-    def to_graphiviz(self):
-        g = graphviz.Digraph()
-        g.attr('node', width='0', height='0', shape='box', fontname='Fira Code')
-        self._add_to_gv(g, make_serial())
-        return g
-
-    def _node_label(self):
-        return self.__class__.__name__
-
-    def _add_to_gv(self, graph: graphviz.Digraph, serial, parent_name=None, edge_opts=None):
-        name = 'N_{}'.format(serial())
-        graph.node(name, self._node_label())
-        if parent_name is not None:
-            graph.edge(parent_name, name, **(edge_opts or {}))
-
-        for c in self.children:
-            if isinstance(c, BaseNode):
-                c._add_to_gv(graph, serial, name)
-
-        return name
-
-
-class Char(BaseNode):
-    def _node_label(self):
-        return self.children[0]
-
-
-class NotChar(BaseNode):
-    def _node_label(self):
-        return '^%c' % self.children[0]
-
-
-class Dot(BaseNode):
-    pass
-
-
-class Star(BaseNode):
-    pass
-
-
-class Cat(BaseNode):
-    def _add_to_gv(self, graph: graphviz.Digraph, serial, parent_name=None, edge_opts=None):
-        root_name = 'N_{}'.format(serial())
-        graph.node(root_name, self._node_label())
-
-        child_names = []
-        prev_name = root_name
-        for i, ch in enumerate(self.children):
-            sub_edge_opts = dict(arrowhead='none') if i != 0 else {}
-            name = ch._add_to_gv(graph, serial, prev_name, edge_opts=sub_edge_opts)
-            child_names.append(name)
-            prev_name = name
-
-        subgraph = graphviz.Digraph()
-        subgraph.attr('graph', rank='same')
-        for ch_name in child_names:
-            subgraph.node(ch_name)
-        graph.subgraph(subgraph)
-
-        if parent_name is not None:
-            graph.edge(parent_name, root_name, **(edge_opts or {}))
-        return root_name
-
-
-class Or(BaseNode):
-    pass
+from regex.parser import make_serial, BaseNode, Char, NotChar, Dot, Star, Cat, Or
 
 
 def nfa_to_gv(nfa, labelize=True):
@@ -166,7 +84,7 @@ def ε_closure(nfas):
 
 def regex_to_nfa(re):
     """
-    :type re: BaseNode
+    :type re: regex.parser.BaseNode
     :rtype: (NfaState, NfaState)
     """
     if isinstance(re, Char):
