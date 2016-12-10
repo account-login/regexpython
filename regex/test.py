@@ -2,8 +2,15 @@ from regex.parser import *
 from regex.statemachine import *
 
 
+def token_list_from_string(string):
+    return list(tokenize(BufferedGen(iter(string))))
+
+
 def test_tokenizer_basic():
-    tokens = list(tokenize(iter('^ab(|)[][^c]*$')))
+    tokens = token_list_from_string('')
+    assert tokens == [Token.EOF]
+
+    tokens = token_list_from_string('^ab(|)[][^c]*$')
     assert tokens == [
         Token.BEGIN, 'a', 'b', Token.LPAR, Token.OR, Token.RPAR,
         Token.LBRACKET, Token.RBRACKET, Token.LBRACKET, Token.NOT, 'c', Token.RBRACKET,
@@ -12,13 +19,26 @@ def test_tokenizer_basic():
 
 
 def test_tokenizer_right_bracket():
-    tokens = list(tokenize(iter(']')))
-    assert tokens == [']', Token.EOF]
+    assert token_list_from_string(']') == [']', Token.EOF]
 
 
 def test_tokenizer_bracket_no_special():
-    tokens = list(tokenize(iter('[^[|*+?^()]')))
+    tokens = token_list_from_string('[^[|*+?^()]')
     assert tokens == [Token.LBRACKET, Token.NOT] + list('[|*+?^()') + [Token.RBRACKET, Token.EOF]
+
+
+def test_tokenizer_bracket_range():
+    tokens = token_list_from_string('[a-c]')
+    assert tokens == [Token.LBRACKET, CharRange('a', 'c'), Token.RBRACKET, Token.EOF]
+
+    tokens = token_list_from_string('[a-c-d]')
+    assert tokens == [Token.LBRACKET, CharRange('a', 'c'), '-', 'd', Token.RBRACKET, Token.EOF]
+
+    tokens = token_list_from_string('[a-]')
+    assert tokens == [Token.LBRACKET, 'a', '-', Token.RBRACKET, Token.EOF]
+
+    tokens = token_list_from_string('[-a-]')
+    assert tokens == [Token.LBRACKET, '-', 'a', '-', Token.RBRACKET, Token.EOF]
 
 
 def test_paser_basic():
@@ -41,7 +61,7 @@ def test_paser_basic():
     assert ast == expected
 
 
-def test_parser_bracket():
+def test_parser_bracket_basic():
     ast = regex_from_string('[]')
     assert ast == Empty
     ast = regex_from_string('[abc]')
@@ -52,20 +72,32 @@ def test_parser_bracket():
     )
 
 
+def test_parser_bracket_range():
+    ast = regex_from_string('[a-c]')
+    assert ast == Or(
+        Char('a'),
+        Char('b'),
+        Char('c'),
+    )
+
+
 def test_match_begin():
     cases = (
-        ('abc',     'abcd',     3),
-        ('a*',      'aaaaa',    5),
-        ('a*b',     'bb',       1),
-        ('a*b',     'aaabb',    4),
-        ('a*b',     'aaaa',     0),
-        ('.a.*',    'basdf',    5),
-        ('a|cd',    'a',        1),
-        ('a|cd',    'cda',      2),
-        ('|a||b|',  'ab',       1),
-        ('|a||b|',  '',         0),
-        ('|a||b|',  'ba',       1),
-        ('[abc]*',  'bbaacad',  6),
+        ('abc',         'abcd',     3),
+        ('a*',          'aaaaa',    5),
+        ('a*b',         'bb',       1),
+        ('a*b',         'aaabb',    4),
+        ('a*b',         'aaaa',     0),
+        ('.a.*',        'basdf',    5),
+        ('a|cd',        'a',        1),
+        ('a|cd',        'cda',      2),
+        ('|a||b|',      'ab',       1),
+        ('|a||b|',      '',         0),
+        ('|a||b|',      'ba',       1),
+        ('[abc]*',      'bbaacad',  6),
+        ('[ab-]*',      'bbaacad',  4),
+        ('[a-c]*',      'bbaacad',  6),
+        ('[b-da-a]*',   'bbaacad',  7),
     )
 
     for pattern, string, ans in cases:

@@ -3,13 +3,10 @@ import graphviz
 from regex.utils import make_serial, AutoNumber
 
 
-class TokenGen:
-    NONE = object()
-
+class BufferedGen:
     def __init__(self, gen):
         self.gen = gen
         self.buffer = []
-        self.eof = False
 
     def peek(self):
         ret = self.get()
@@ -17,17 +14,6 @@ class TokenGen:
         return ret
 
     def get(self):
-        if not self.eof:
-            ret = self._get()
-            if ret is Token.EOF:
-                self.eof = True
-
-        if self.eof:
-            return Token.EOF
-        else:
-            return ret
-
-    def _get(self):
         if self.buffer:
             return self.buffer.pop()
         else:
@@ -35,6 +21,27 @@ class TokenGen:
 
     def unget(self, item):
         self.buffer.append(item)
+
+
+class TokenGen(BufferedGen):
+    def __init__(self, gen):
+        super().__init__(gen)
+        self.eof = False
+
+    def get(self):
+        if not self.eof:
+            try:
+                ret = super().get()
+            except StopIteration:
+                self.eof = True
+            else:
+                if ret is Token.EOF:
+                    self.eof = True
+
+        if self.eof:
+            return Token.EOF
+        else:
+            return ret
 
     def eat(self, expect=None):
         tok = self.get()
@@ -64,11 +71,11 @@ class Token(AutoNumber):
     EOF = ()
 
 
-def read_escape(chars):
-    return next(chars)
+def read_escape(chars: BufferedGen):
+    return chars.get()
 
 
-def tokenize(chars):
+def tokenize(chars: BufferedGen):
     direct_yield = {
         '|': Token.OR,
         '(': Token.LPAR,
@@ -85,7 +92,7 @@ def tokenize(chars):
     prev = None
     while True:
         try:
-            ch = next(chars)
+            ch = chars.get()
         except StopIteration:
             yield Token.EOF
             raise
@@ -103,6 +110,26 @@ def tokenize(chars):
                     tok = ch
             else:
                 tok = ch
+                try:
+                    next_ch = chars.get()
+                except StopIteration:
+                    pass
+                else:
+                    if next_ch == '-':
+                        try:
+                            next_next_ch = chars.get()
+                        except StopIteration:
+                            pass
+                        else:
+                            if next_next_ch == '\\':
+                                raise ParseError('bad range')
+                            elif next_next_ch != ']':
+                                tok = CharRange(tok, next_next_ch)
+                            else:
+                                chars.unget(next_next_ch)
+                                chars.unget(next_ch)
+                    else:
+                        chars.unget(next_ch)
         else:
             if ch in direct_yield:
                 tok = direct_yield[ch]
@@ -116,6 +143,23 @@ def tokenize(chars):
 
         prev = tok
         yield tok
+
+
+class CharRange:
+    def __init__(self, start, end):
+        for ch in (start, end):
+            assert isinstance(ch, str) and len(ch) == 1
+        if ord(end) < ord(start):
+            raise ParseError('bad range')
+        # assert ord(end) >= ord(start)
+        self.start, self.end = start, end
+
+    def __eq__(self, other):
+        return self.start, self.end == other.start, other.end
+
+    def __iter__(self):
+        for codepoint in range(ord(self.start), ord(self.end) + 1):
+            yield Char(chr(codepoint))
 
 
 class ParseError(Exception):
@@ -161,7 +205,10 @@ def parser_bracket(tokens: TokenGen):
                     return Or(*ors)
             elif tok is Token.EOF:
                 raise UnexpectedToken(got=tok, expect=Token.RBRACKET)
+            elif isinstance(tok, CharRange):
+                ors.extend(tok)
             elif isinstance(tok, str):
+                assert len(tok) == 1
                 ors.append(Char(tok))
             else:
                 raise NotImplementedError
@@ -242,7 +289,7 @@ def parse(tokens: TokenGen):
 
 
 def regex_from_string(string):
-    tokens = TokenGen(tokenize(iter(string)))
+    tokens = TokenGen(tokenize(BufferedGen(iter(string))))
     return parse(tokens)
 
 
