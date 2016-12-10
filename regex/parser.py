@@ -1,7 +1,6 @@
-import itertools
-from enum import Enum
-
 import graphviz
+
+from regex.utils import make_serial, AutoNumber
 
 
 class TokenGen:
@@ -36,14 +35,6 @@ class TokenGen:
 
     def unget(self, item):
         self.buffer.append(item)
-
-
-class AutoNumber(Enum):
-    def __new__(cls):
-        value = len(cls.__members__) + 1
-        obj = object.__new__(cls)
-        obj._value_ = value
-        return obj
 
 
 class Token(AutoNumber):
@@ -223,11 +214,6 @@ def parse(tokens: TokenGen):
 def regex_from_string(string):
     tokens = TokenGen(tokenize(iter(string)))
     return parse(tokens)
-
-
-def make_serial():
-    gen = itertools.count()
-    return lambda: next(gen)
 
 
 class BaseNode:

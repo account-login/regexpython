@@ -2,7 +2,8 @@ from collections import deque
 from itertools import chain
 import graphviz
 
-from regex.parser import make_serial, BaseNode, Char, NotChar, Dot, Star, Cat, Or, Empty
+from regex.parser import BaseNode, Char, NotChar, Dot, Star, Cat, Or, Empty
+from regex.utils import make_serial
 
 
 def nfa_to_gv(nfa, labelize=True):
