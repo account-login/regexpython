@@ -2,7 +2,7 @@ from collections import deque
 from itertools import chain
 import graphviz
 
-from regex.parser import make_serial, BaseNode, Char, NotChar, Dot, Star, Cat, Or
+from regex.parser import make_serial, BaseNode, Char, NotChar, Dot, Star, Cat, Or, Empty
 
 
 def nfa_to_gv(nfa, labelize=True):
@@ -106,11 +106,17 @@ def regex_to_nfa(re):
 
         return sub_start, sub_end
     elif isinstance(re, Cat):
-        s1, e1 = regex_to_nfa(re.children[0])
-        s2, e2 = regex_to_nfa(re.children[1])
-        e1.epsilon.add(s2)
+        assert len(re.children) > 0
+        start = None
+        prev_e = None
+        for s, e in map(regex_to_nfa, re.children):
+            if start is None:
+                start = s
+            if prev_e is not None:
+                prev_e.epsilon.add(s)
+            prev_e = e
 
-        return s1, e2
+        return start, e
     elif isinstance(re, Or):
         s1, e1 = regex_to_nfa(re.children[0])
         s2, e2 = regex_to_nfa(re.children[1])
@@ -120,6 +126,9 @@ def regex_to_nfa(re):
             e.epsilon.add(end)
 
         return start, end
+    elif isinstance(re, Empty):
+        end = NfaState()
+        return end, end
     else:
         raise NotImplementedError
 
