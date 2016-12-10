@@ -2,13 +2,23 @@ from regex.parser import *
 from regex.statemachine import *
 
 
-def test_tokenizer():
+def test_tokenizer_basic():
     tokens = list(tokenize(iter('^ab(|)[][^c]*$')))
     assert tokens == [
         Token.BEGIN, 'a', 'b', Token.LPAR, Token.OR, Token.RPAR,
         Token.LBRACKET, Token.RBRACKET, Token.LBRACKET, Token.NOT, 'c', Token.RBRACKET,
         Token.STAR, Token.END, Token.EOF,
     ]
+
+
+def test_tokenizer_right_bracket():
+    tokens = list(tokenize(iter(']')))
+    assert tokens == [']', Token.EOF]
+
+
+def test_tokenizer_bracket_no_special():
+    tokens = list(tokenize(iter('[^[|*+?^()]')))
+    assert tokens == [Token.LBRACKET, Token.NOT] + list('[|*+?^()') + [Token.RBRACKET, Token.EOF]
 
 
 def test_paser():

@@ -73,14 +73,15 @@ def tokenize(chars):
         '|': Token.OR,
         '(': Token.LPAR,
         ')': Token.RPAR,
-        '[': Token.LBRACKET,
-        ']': Token.RBRACKET,
+        # '[': Token.LBRACKET,
+        # ']': Token.RBRACKET,
         '*': Token.STAR,
         '.': Token.DOT,
-        # '^': Token.BEGIN,
+        '^': Token.BEGIN,
         '$': Token.END,
     }
 
+    in_bracket = False
     prev = None
     while True:
         try:
@@ -89,17 +90,29 @@ def tokenize(chars):
             yield Token.EOF
             raise
 
-        if ch in direct_yield:
-            tok = direct_yield[ch]
-        elif ch == '^':
-            if prev == Token.LBRACKET:
-                tok = Token.NOT
+        if in_bracket:
+            if ch == '\\':
+                tok = read_escape(chars)
+            elif ch == ']':
+                in_bracket = False
+                tok = Token.RBRACKET
+            elif ch == '^':
+                if prev == Token.LBRACKET:
+                    tok = Token.NOT
+                else:
+                    tok = ch
             else:
-                tok = Token.BEGIN
-        elif ch == '\\':
-            tok = read_escape(chars)
+                tok = ch
         else:
-            tok = ch
+            if ch in direct_yield:
+                tok = direct_yield[ch]
+            elif ch == '[':
+                in_bracket = True
+                tok = Token.LBRACKET
+            elif ch == '\\':
+                tok = read_escape(chars)
+            else:
+                tok = ch
 
         prev = tok
         yield tok
@@ -132,7 +145,7 @@ def parse_par(tokens: TokenGen):
     return ret
 
 
-def parse_bra(tokens: TokenGen):
+def parser_bracket(tokens: TokenGen):
     pass
 
 
@@ -147,7 +160,7 @@ def parse_cat(tokens: TokenGen):
         elif ch is Token.LPAR:
             cats.append(parse_par(tokens))
         elif ch is Token.LBRACKET:
-            cats.append(parse_bra(tokens))
+            cats.append(parser_bracket(tokens))
         elif ch is Token.STAR:
             if not cats:
                 raise UnexpectedToken(got=ch)
