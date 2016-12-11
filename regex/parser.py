@@ -333,7 +333,9 @@ class Empty(BaseNode):
 
 class Char(BaseNode):
     def _node_label(self):
-        return self.children[0]
+        assert len(self.children) == 1
+        assert isinstance(self.children[0], (str, Token))
+        return str(self.children[0])
 
 
 class CharRange(BaseNode):
