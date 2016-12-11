@@ -43,9 +43,11 @@ def test_tokenizer_bracket_range():
     assert tokens == [Token.LBRACKET, Token.DASH, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
 
-def expect_parser_raise(string, exception=ParseError):
-    with pytest.raises(exception):
+def expect_parser_raise(string, exception=ParseError, msg=None):
+    with pytest.raises(exception) as exec_info:
         regex_from_string(string)
+    if msg is not None:
+        assert msg in repr(exec_info.value)
 
 
 def test_paser_basic():
@@ -69,7 +71,7 @@ def test_paser_basic():
 
 
 def test_parser_unexpected_repeat():
-    expect_parser_raise('*', ParseError)
+    expect_parser_raise('*', ParseError, msg='nothing to repeat')
 
 
 def test_parser_bracket_basic():
@@ -118,7 +120,7 @@ def test_parser_bracket_bad_range():
 
 
 def test_match_begin():
-    cases = (
+    cases = [
         ('abc',         'abcd',     3),
         ('a*',          'aaaaa',    5),
         ('a*b',         'bb',       1),
@@ -134,7 +136,7 @@ def test_match_begin():
         ('[ab-]*',      'bbaacad',  4),
         ('[a-c]*',      'bbaacad',  6),
         ('[b-da-a]*',   'bbaacad',  7),
-    )
+    ]
 
     for pattern, string, ans in cases:
         re = regex_from_string(pattern)
