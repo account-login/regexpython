@@ -2,6 +2,7 @@ import pytest
 
 from regex.parser import *
 from regex.statemachine import *
+from regex.visualize import *
 
 
 def token_list_from_string(string):
@@ -141,3 +142,21 @@ def test_match_begin():
     for pattern, string, ans in cases:
         re = regex_from_string(pattern)
         assert regex_match_begin(re, string) is ans
+
+
+def test_ast_to_svg():
+    ast = regex_from_string('^ab(a||b|)*|c$')
+    assert ast._repr_svg_().startswith('<?xml')
+
+
+def test_nfa_to_svg():
+    ast = regex_from_string('ab(a||b|)*|c')
+    nfa_pair = regex_to_nfa(ast)
+    assert nfa_pair._repr_svg_().startswith('<?xml')
+
+
+def test_dfa_to_svg():
+    ast = regex_from_string('ab(a||b|)*|c')
+    nfa_pair = regex_to_nfa(ast)
+    dfa = DfaState.from_nfa(nfa_pair)
+    assert dfa._repr_svg_().startswith('<?xml')
