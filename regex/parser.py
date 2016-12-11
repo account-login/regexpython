@@ -44,11 +44,12 @@ class TokenGen(BufferedGen):
             return ret
 
     def eat(self, expect=None):
+        assert expect is not Token.EOF
         tok = self.get()
+        if tok is Token.EOF:
+            raise UnexpectedEOF(expect=expect)
         if expect is not None and tok != expect:
             raise UnexpectedToken(got=tok, expect=expect)
-        if tok is Token.EOF:
-            raise UnexpectedEOF
 
 
 class Token(AutoNumber):
@@ -133,20 +134,30 @@ class ParseError(Exception):
     pass
 
 
-class UnexpectedEOF(ParseError):
+class BadRange(ParseError):
     pass
 
 
 class UnexpectedToken(ParseError):
-    def __init__(self, got, expect=None):
-        super().__init__(got, expect)
+    def __init__(self, got, expect=None, msg=None):
+        super().__init__(msg, got, expect)
         self.got = got
         self.expect = expect
+        self.msg = msg
 
     def __repr__(self):
-        return '<{name} {id:#x} expect={expect}, got={got}>'\
+        return '<{name} {id:#x} msg={msg} expect={expect}, got={got}>'\
             .format(name=self.__class__.__name__, id=id(self),
-                    expect=self.expect, got=self.got)
+                    msg=self.msg, expect=self.expect, got=self.got)
+
+
+class UnexpectedEOF(UnexpectedToken):
+    def __init__(self, got=None, expect=None, msg=None):
+        if got is not None:
+            assert got is Token.EOF
+        else:
+            got = Token.EOF
+        super().__init__(got=got, expect=expect, msg=msg)
 
 
 def parse_par(tokens: TokenGen):
@@ -174,7 +185,7 @@ def parser_bracket(tokens: TokenGen):
                 else:
                     return Or(*ors)
             elif tok is Token.EOF:
-                raise UnexpectedToken(got=tok, expect=Token.RBRACKET)
+                raise UnexpectedEOF()
             elif tok is Token.DASH:
                 if len(ors) == 0:
                     ors.append(Char('-'))
@@ -183,7 +194,7 @@ def parser_bracket(tokens: TokenGen):
                     if next_tok is Token.RBRACKET:
                         ors.append(Char('-'))
                     elif next_tok is Token.EOF:
-                        raise UnexpectedToken(got=tok, expect=Token.RBRACKET)
+                        raise UnexpectedEOF(expect=Token.RBRACKET)
                     else:
                         if isinstance(ors[-1], Char):
                             ors[-1] = CharRange(start=ors[-1].children[0], end=tokens.get())
@@ -211,7 +222,7 @@ def parse_cat(tokens: TokenGen):
             cats.append(parser_bracket(tokens))
         elif ch is Token.STAR:
             if not cats:
-                raise UnexpectedToken(got=ch)
+                raise ParseError('nothing to repeat')
             if isinstance(cats[-1], Star):
                 raise ParseError('mutiple repeat')
             cats[-1] = Star(cats[-1])
@@ -224,7 +235,7 @@ def parse_cat(tokens: TokenGen):
             tokens.eat(ch)
         elif isinstance(ch, Token):
             assert ch in (Token.RBRACKET, Token.NOT)
-            raise UnexpectedToken(got=ch)
+            assert False, 'impossible'
         else:
             assert isinstance(ch, str) and len(ch) == 1
             cats.append(Char(ch))
@@ -266,7 +277,7 @@ def parse(tokens: TokenGen):
     exp = parse_exp(tokens)
     tok = tokens.peek()
     if tok is not Token.EOF:
-        raise UnexpectedToken(got=tok)
+        assert False, 'impossible'
     else:
         return exp
 
@@ -331,9 +342,9 @@ class CharRange(BaseNode):
         super().__init__(*args)
         for ch in (start, end):
             if not isinstance(ch, str) and len(ch) == 1:
-                raise ParseError('bad range')
+                raise BadRange('not character type')
         if ord(end) < ord(start):
-            raise ParseError('bad range')
+            raise BadRange('reversed range')
         self.start, self.end = start, end
 
     def __eq__(self, other):

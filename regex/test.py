@@ -1,3 +1,5 @@
+import pytest
+
 from regex.parser import *
 from regex.statemachine import *
 
@@ -41,6 +43,11 @@ def test_tokenizer_bracket_range():
     assert tokens == [Token.LBRACKET, Token.DASH, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
 
+def expect_parser_raise(string, exception=ParseError):
+    with pytest.raises(exception):
+        regex_from_string(string)
+
+
 def test_paser_basic():
     ast = regex_from_string('^ab(a||b|)*|c$')
     expected = Or(
@@ -61,6 +68,10 @@ def test_paser_basic():
     assert ast == expected
 
 
+def test_parser_unexpected_repeat():
+    expect_parser_raise('*', ParseError)
+
+
 def test_parser_bracket_basic():
     ast = regex_from_string('[]')
     assert ast == Empty
@@ -70,6 +81,11 @@ def test_parser_bracket_basic():
         Char('b'),
         Char('c'),
     )
+
+
+def test_parser_bracket_not_closed():
+    expect_parser_raise('[', UnexpectedEOF)
+    expect_parser_raise('[a-', UnexpectedEOF)
 
 
 def test_parser_bracket_range():
@@ -95,6 +111,10 @@ def test_parser_bracket_range():
         Char('a'),
         Char('-'),
     )
+
+
+def test_parser_bracket_bad_range():
+    expect_parser_raise('[z-a]', BadRange)
 
 
 def test_match_begin():
