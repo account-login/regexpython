@@ -29,16 +29,16 @@ def test_tokenizer_bracket_no_special():
 
 def test_tokenizer_bracket_range():
     tokens = token_list_from_string('[a-c]')
-    assert tokens == [Token.LBRACKET, CharRange('a', 'c'), Token.RBRACKET, Token.EOF]
+    assert tokens == [Token.LBRACKET, 'a', Token.DASH, 'c', Token.RBRACKET, Token.EOF]
 
     tokens = token_list_from_string('[a-c-d]')
-    assert tokens == [Token.LBRACKET, CharRange('a', 'c'), '-', 'd', Token.RBRACKET, Token.EOF]
+    assert tokens == [Token.LBRACKET, 'a', Token.DASH, 'c', Token.DASH, 'd', Token.RBRACKET, Token.EOF]
 
     tokens = token_list_from_string('[a-]')
-    assert tokens == [Token.LBRACKET, 'a', '-', Token.RBRACKET, Token.EOF]
+    assert tokens == [Token.LBRACKET, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
     tokens = token_list_from_string('[-a-]')
-    assert tokens == [Token.LBRACKET, '-', 'a', '-', Token.RBRACKET, Token.EOF]
+    assert tokens == [Token.LBRACKET, Token.DASH, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
 
 def test_paser_basic():
@@ -74,10 +74,26 @@ def test_parser_bracket_basic():
 
 def test_parser_bracket_range():
     ast = regex_from_string('[a-c]')
+    assert ast == CharRange('a', 'c')
+
+    ast = regex_from_string('[a-c-d]')
+    assert ast == Or(
+        CharRange('a', 'c'),
+        Char('-'),
+        Char('d'),
+    )
+
+    ast = regex_from_string('[a-]')
     assert ast == Or(
         Char('a'),
-        Char('b'),
-        Char('c'),
+        Char('-'),
+    )
+
+    ast = regex_from_string('[-a-]')
+    assert ast == Or(
+        Char('-'),
+        Char('a'),
+        Char('-'),
     )
 
 

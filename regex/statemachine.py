@@ -2,7 +2,7 @@ from collections import deque
 from itertools import chain
 import graphviz
 
-from regex.parser import BaseNode, Char, NotChar, Dot, Star, Cat, Or, Empty
+from regex.parser import BaseNode, Char, CharRange, NotChar, Dot, Star, Cat, Or, Empty
 from regex.utils import make_serial
 
 
@@ -92,6 +92,8 @@ def regex_to_nfa(re):
         end = NfaState()
         start = NfaState(char=re.children[0], to=end)
         return start, end
+    elif isinstance(re, CharRange):
+        return regex_to_nfa(Or(*re))
     elif isinstance(re, NotChar):
         end = NfaState()
         start = NfaState(not_char=re.children[0], other=end)

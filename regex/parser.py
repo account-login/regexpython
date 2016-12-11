@@ -59,6 +59,7 @@ class Token(AutoNumber):
 
     LBRACKET = ()
     RBRACKET = ()
+    DASH = ()
 
     STAR = ()
     NOT = ()
@@ -72,6 +73,7 @@ class Token(AutoNumber):
 
 
 def read_escape(chars: BufferedGen):
+    # TODO:
     return chars.get()
 
 
@@ -108,28 +110,10 @@ def tokenize(chars: BufferedGen):
                     tok = Token.NOT
                 else:
                     tok = ch
+            elif ch == '-':
+                tok = Token.DASH
             else:
                 tok = ch
-                try:
-                    next_ch = chars.get()
-                except StopIteration:
-                    pass
-                else:
-                    if next_ch == '-':
-                        try:
-                            next_next_ch = chars.get()
-                        except StopIteration:
-                            pass
-                        else:
-                            if next_next_ch == '\\':
-                                raise ParseError('bad range')
-                            elif next_next_ch != ']':
-                                tok = CharRange(tok, next_next_ch)
-                            else:
-                                chars.unget(next_next_ch)
-                                chars.unget(next_ch)
-                    else:
-                        chars.unget(next_ch)
         else:
             if ch in direct_yield:
                 tok = direct_yield[ch]
@@ -148,10 +132,10 @@ def tokenize(chars: BufferedGen):
 class CharRange:
     def __init__(self, start, end):
         for ch in (start, end):
-            assert isinstance(ch, str) and len(ch) == 1
+            if not isinstance(ch, str) and len(ch) == 1:
+                raise ParseError('bad range')
         if ord(end) < ord(start):
             raise ParseError('bad range')
-        # assert ord(end) >= ord(start)
         self.start, self.end = start, end
 
     def __eq__(self, other):
@@ -193,6 +177,7 @@ def parser_bracket(tokens: TokenGen):
     tokens.eat(Token.LBRACKET)
     tok = tokens.peek()
     if tok is Token.NOT:
+        # TODO:
         raise NotImplementedError
     else:
         ors = []
@@ -201,12 +186,27 @@ def parser_bracket(tokens: TokenGen):
             if tok is Token.RBRACKET:
                 if len(ors) == 0:
                     return Empty
+                elif len(ors) == 1:
+                    return ors[0]
                 else:
                     return Or(*ors)
             elif tok is Token.EOF:
                 raise UnexpectedToken(got=tok, expect=Token.RBRACKET)
-            elif isinstance(tok, CharRange):
-                ors.extend(tok)
+            elif tok is Token.DASH:
+                if len(ors) == 0:
+                    ors.append(Char('-'))
+                else:
+                    next_tok = tokens.peek()
+                    if next_tok is Token.RBRACKET:
+                        ors.append(Char('-'))
+                    elif next_tok is Token.EOF:
+                        raise UnexpectedToken(got=tok, expect=Token.RBRACKET)
+                    else:
+                        if isinstance(ors[-1], Char):
+                            ors[-1] = CharRange(ors[-1].children[0], tokens.get())
+                        else:
+                            # TODO: possible bad range error
+                            ors.append(Char('-'))
             elif isinstance(tok, str):
                 assert len(tok) == 1
                 ors.append(Char(tok))
@@ -296,7 +296,7 @@ def regex_from_string(string):
 class BaseNode:
     def __init__(self, *children):
         """
-        :type children: tuple[BaseNode|Token|str]
+        :type children: tuple[BaseNode|Token|CharRange|str]
         """
         self.children = children
 
