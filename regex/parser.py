@@ -129,23 +129,6 @@ def tokenize(chars: BufferedGen):
         yield tok
 
 
-class CharRange:
-    def __init__(self, start, end):
-        for ch in (start, end):
-            if not isinstance(ch, str) and len(ch) == 1:
-                raise ParseError('bad range')
-        if ord(end) < ord(start):
-            raise ParseError('bad range')
-        self.start, self.end = start, end
-
-    def __eq__(self, other):
-        return self.start, self.end == other.start, other.end
-
-    def __iter__(self):
-        for codepoint in range(ord(self.start), ord(self.end) + 1):
-            yield Char(chr(codepoint))
-
-
 class ParseError(Exception):
     pass
 
@@ -203,7 +186,7 @@ def parser_bracket(tokens: TokenGen):
                         raise UnexpectedToken(got=tok, expect=Token.RBRACKET)
                     else:
                         if isinstance(ors[-1], Char):
-                            ors[-1] = CharRange(ors[-1].children[0], tokens.get())
+                            ors[-1] = CharRange(start=ors[-1].children[0], end=tokens.get())
                         else:
                             # TODO: possible bad range error
                             ors.append(Char('-'))
@@ -294,9 +277,9 @@ def regex_from_string(string):
 
 
 class BaseNode:
-    def __init__(self, *children):
+    def __init__(self, *children, **kwargs):
         """
-        :type children: tuple[BaseNode|Token|CharRange|str]
+        :type children: tuple[BaseNode|Token|str]
         """
         self.children = children
 
@@ -340,6 +323,25 @@ class Empty(BaseNode):
 class Char(BaseNode):
     def _node_label(self):
         return self.children[0]
+
+
+class CharRange(BaseNode):
+    def __init__(self, *args, start=None, end=None):
+        assert len(args) == 0
+        super().__init__(*args)
+        for ch in (start, end):
+            if not isinstance(ch, str) and len(ch) == 1:
+                raise ParseError('bad range')
+        if ord(end) < ord(start):
+            raise ParseError('bad range')
+        self.start, self.end = start, end
+
+    def __eq__(self, other):
+        return self.start, self.end == other.start, other.end
+
+    def __iter__(self):
+        for codepoint in range(ord(self.start), ord(self.end) + 1):
+            yield Char(chr(codepoint))
 
 
 class NotChar(BaseNode):

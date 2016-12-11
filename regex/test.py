@@ -74,11 +74,11 @@ def test_parser_bracket_basic():
 
 def test_parser_bracket_range():
     ast = regex_from_string('[a-c]')
-    assert ast == CharRange('a', 'c')
+    assert ast == CharRange(start='a', end='c')
 
     ast = regex_from_string('[a-c-d]')
     assert ast == Or(
-        CharRange('a', 'c'),
+        CharRange(start='a', end='c'),
         Char('-'),
         Char('d'),
     )
