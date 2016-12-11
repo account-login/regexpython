@@ -104,8 +104,12 @@ def tokenize(chars: BufferedGen):
             if ch == '\\':
                 tok = read_escape(chars)
             elif ch == ']':
-                in_bracket = False
-                tok = Token.RBRACKET
+                if prev is Token.LBRACKET:
+                    # empty bracket not allowed, left bracket must follow a regular char.
+                    tok = ch
+                else:
+                    in_bracket = False
+                    tok = Token.RBRACKET
             elif ch == '^':
                 if prev == Token.LBRACKET:
                     tok = Token.NOT
@@ -179,7 +183,7 @@ def parser_bracket(tokens: TokenGen):
             tok = tokens.get()
             if tok is Token.RBRACKET:
                 if len(ors) == 0:
-                    return Empty
+                    assert False, 'impossible'
                 elif len(ors) == 1:
                     return ors[0]
                 else:

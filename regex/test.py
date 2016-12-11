@@ -13,10 +13,10 @@ def test_tokenizer_basic():
     tokens = token_list_from_string('')
     assert tokens == [Token.EOF]
 
-    tokens = token_list_from_string('^ab(|)[][^c]*$')
+    tokens = token_list_from_string('^ab(|)[a][^c]*$')
     assert tokens == [
         Token.BEGIN, 'a', 'b', Token.LPAR, Token.OR, Token.RPAR,
-        Token.LBRACKET, Token.RBRACKET, Token.LBRACKET, Token.NOT, 'c', Token.RBRACKET,
+        Token.LBRACKET, 'a', Token.RBRACKET, Token.LBRACKET, Token.NOT, 'c', Token.RBRACKET,
         Token.STAR, Token.END, Token.EOF,
     ]
 
@@ -28,6 +28,14 @@ def test_tokenizer_right_bracket():
 def test_tokenizer_bracket_no_special():
     tokens = token_list_from_string('[^[|*+?^()]')
     assert tokens == [Token.LBRACKET, Token.NOT] + list('[|*+?^()') + [Token.RBRACKET, Token.EOF]
+
+
+def test_tokenizer_bracket_non_empty():
+    tokens = token_list_from_string('[]')
+    assert tokens == [Token.LBRACKET, ']', Token.EOF]
+
+    tokens = token_list_from_string('[]]')
+    assert tokens == [Token.LBRACKET, ']', Token.RBRACKET, Token.EOF]
 
 
 def test_tokenizer_bracket_range():
@@ -76,14 +84,16 @@ def test_parser_unexpected_repeat():
 
 
 def test_parser_bracket_basic():
-    ast = regex_from_string('[]')
-    assert ast == Empty
     ast = regex_from_string('[abc]')
     assert ast == Or(
         Char('a'),
         Char('b'),
         Char('c'),
     )
+
+
+def test_perser_bracket_empty():
+    expect_parser_raise('[]', UnexpectedEOF)
 
 
 def test_parser_bracket_not_closed():
