@@ -1,15 +1,12 @@
 from itertools import chain
 import graphviz
 
-from regex.statemachine import NfaState, DfaState
+from regex.statemachine import NfaState, NfaPair, DfaState
 from regex.utils import make_serial
 
 
-def nfa_labelize(nfa):
-    """
-    :type nfa: (NfaState, NfaState)
-    """
-    start, end = nfa
+def nfa_labelize(nfa_pair: NfaPair):
+    start, end = nfa_pair
 
     if start is end:
         start.label = 'START & END'
@@ -32,15 +29,11 @@ def nfa_labelize(nfa):
     rec(start)
 
 
-def nfa_to_gv(nfa, labelize=True):
-    """
-    :type nfa: (NfaState, NfaState)
-    """
-
+def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
     if labelize:
-        nfa_labelize(nfa)
+        nfa_labelize(nfa_pair)
 
-    start, end = nfa
+    start, end = nfa_pair
     g = graphviz.Digraph()
     g.attr('node', style='filled', width='0', height='0', shape='box', fontname='Fira Code')
 

@@ -1,4 +1,4 @@
-from collections import deque
+from collections import deque, namedtuple
 from itertools import chain
 
 from regex.parser import BaseNode, Char, CharRange, NotChar, Dot, Star, Cat, Or, Empty
@@ -17,6 +17,15 @@ class NfaState:
         return '<{}>'.format(self.label)
 
 
+class NfaPair(namedtuple('NfaPair', ('start', 'end'))):
+    def to_graphviz(self):
+        from regex.visualize import nfa_to_gv
+        return nfa_to_gv(self)
+
+    def _repr_svg_(self):
+        return self.to_graphviz()._repr_svg_()
+
+
 def ε_closure(nfas):
     """
     :type nfas: set[NfaState]
@@ -32,31 +41,27 @@ def ε_closure(nfas):
             return ans
 
 
-def regex_to_nfa(re):
-    """
-    :type re: regex.parser.BaseNode
-    :rtype: (NfaState, NfaState)
-    """
+def regex_to_nfa(re: BaseNode) -> NfaPair:
     if isinstance(re, Char):
         end = NfaState()
         start = NfaState(char=re.children[0], to=end)
-        return start, end
+        return NfaPair(start, end)
     elif isinstance(re, CharRange):
         return regex_to_nfa(Or(*re))
     elif isinstance(re, NotChar):
         end = NfaState()
         start = NfaState(not_char=re.children[0], other=end)
-        return start, end
+        return NfaPair(start, end)
     elif isinstance(re, Dot):
         end = NfaState()
         start = NfaState(other=end)
-        return start, end
+        return NfaPair(start, end)
     elif isinstance(re, Star):
         sub_start, sub_end = regex_to_nfa(re.children[0])
         sub_start.epsilon.add(sub_end)
         sub_end.epsilon.add(sub_start)
 
-        return sub_start, sub_end
+        return NfaPair(sub_start, sub_end)
     elif isinstance(re, Cat):
         assert len(re.children) > 0
         start = None
@@ -68,7 +73,7 @@ def regex_to_nfa(re):
                 prev_e.epsilon.add(s)
             prev_e = e
 
-        return start, e
+        return NfaPair(start, e)
     elif isinstance(re, Or):
         assert len(re.children) > 0
         start = NfaState()
@@ -77,10 +82,10 @@ def regex_to_nfa(re):
             start.epsilon.add(s)
             e.epsilon.add(end)
 
-        return start, end
+        return NfaPair(start, end)
     elif isinstance(re, Empty):
         end = NfaState()
-        return end, end
+        return NfaPair(end, end)
     else:
         raise NotImplementedError
 
@@ -173,11 +178,8 @@ class DfaState:
         return dfa_to_gv(self)
 
     @classmethod
-    def from_nfa(cls, nfa):
-        """
-        :type nfa: (NfaState, NfaState)
-        """
-        start, end = nfa
+    def from_nfa(cls, nfa_pair: NfaPair):
+        start, end = nfa_pair
         set_to_state = dict()
         start_dfa = None
 
