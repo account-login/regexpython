@@ -1,13 +1,16 @@
 from collections import deque, namedtuple
 from itertools import chain
 
-from regex.parser import BaseNode, Char, CharRange, NotChar, Dot, Star, Cat, Or, Empty
+from regex.parser import BaseNode, Char, CharRange, NotChars, Dot, Star, Cat, Or, Empty
+
+
+# TODO: handle range more effectly
 
 
 class NfaState:
-    def __init__(self, char=None, not_char=None, to=None, other=None, epsilon=None):
+    def __init__(self, char=None, not_chars=None, to=None, other=None, epsilon=None):
         self.char = char
-        self.not_char = not_char
+        self.not_chars = not_chars
         self.to = to
         self.other = other
         self.epsilon = epsilon or set()
@@ -24,6 +27,9 @@ class NfaPair(namedtuple('NfaPair', ('start', 'end'))):
 
     def _repr_svg_(self):
         return self.to_graphviz()._repr_svg_()
+
+    def to_dfa(self):
+        return DfaState.from_nfa(self)
 
 
 def ε_closure(nfas):
@@ -48,9 +54,19 @@ def regex_to_nfa(re: BaseNode) -> NfaPair:
         return NfaPair(start, end)
     elif isinstance(re, CharRange):
         return regex_to_nfa(Or(*re))
-    elif isinstance(re, NotChar):
+    elif isinstance(re, NotChars):
+        children_expanded = set()
+        for child in re.children:
+            if isinstance(child, Char):
+                children_expanded.add(child.children[0])
+            elif isinstance(child, CharRange):
+                for char in child:
+                    children_expanded.add(char.children[0])
+            else:
+                assert False, 'impossible'
+
         end = NfaState()
-        start = NfaState(not_char=re.children[0], other=end)
+        start = NfaState(not_chars=children_expanded, other=end)
         return NfaPair(start, end)
     elif isinstance(re, Dot):
         end = NfaState()
@@ -93,7 +109,7 @@ def regex_to_nfa(re: BaseNode) -> NfaPair:
 class CharToSet:
     def __init__(self):
         self.chars = dict()
-        self.not_accept = set()
+        self.not_accept = set() # type: set
         self.other = set()
 
     def get(self, char):
@@ -115,27 +131,21 @@ class CharToSet:
         else:
             self.chars[char] = self.other.union({ dest })
 
-    def add_not_char(self, not_char, other):
+    def add_not_chars(self, not_chars: set, other):
         for ch, sset in self.chars.items():
-            if ch != not_char:
+            if ch not in not_chars:
                 sset.add(other)
 
         for ch in self.not_accept:
-            if ch != not_char:
+            if ch not in not_chars:
                 self.chars[ch] = { other }
 
-        if not_char in self.chars:
-            assert not_char not in self.not_accept
-            self.not_accept = set()
-        elif not_char in self.not_accept:
-            assert not_char not in self.chars
-            self.not_accept = { not_char }
+        self.not_accept = self.not_accept.intersection(not_chars)   # type: set
+        if self.other:
+            for nc in not_chars:
+                self.chars[nc] = set(self.other)
         else:
-            if self.other:
-                self.chars[not_char] = set(self.other)
-            else:
-                assert not self.not_accept
-                self.not_accept = { not_char }
+            self.not_accept.update(not_chars - set(self.chars.keys()))
 
         self.other.add(other)
 
@@ -192,8 +202,8 @@ class DfaState:
             for nfa in dfa_state.states:    # type: NfaState
                 if nfa.char is not None:
                     dfa_state.char_to_set.add_char(nfa.char, nfa.to)
-                elif nfa.not_char is not None:
-                    dfa_state.char_to_set.add_not_char(nfa.not_char, nfa.other)
+                elif nfa.not_chars is not None:
+                    dfa_state.char_to_set.add_not_chars(nfa.not_chars, nfa.other)
                 elif nfa.other:
                     dfa_state.char_to_set.add_other(nfa.other)
 

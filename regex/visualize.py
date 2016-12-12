@@ -53,12 +53,12 @@ def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
         if node.char is not None:
             sub_name = seen.get(node.to) or rec(node.to)
             g.edge(name, sub_name, node.char)
-        elif node.not_char is not None:
+        elif node.not_chars is not None:
             nonlocal has_fail_node
             if not has_fail_node:
                 g.node('FAIL', color='red', fontcolor='white')
                 has_fail_node = True
-            g.edge(name, 'FAIL', str(node.not_char))
+            g.edge(name, 'FAIL', str(node.not_chars))
 
         if node.other:
             sub_name = seen.get(node.other) or rec(node.other)
