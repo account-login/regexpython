@@ -1,4 +1,4 @@
-from collections import deque, namedtuple
+from collections import namedtuple
 from itertools import chain
 
 from regex.parser import BaseNode, Char, CharRange, NotChars, Dot, Star, Cat, Or, Empty, Token
@@ -212,10 +212,10 @@ class DfaState:
         set_to_state = dict()
         start_dfa = None
 
-        q = deque([ ε_closure({ start }, extra={ Token.BEGIN }) ])
+        q = [ ε_closure({ start }, extra={ Token.BEGIN }) ]
         while q:
             dfa_state = cls(set_to_state, end)
-            dfa_state.states = q.popleft()
+            dfa_state.states = q.pop()
             start_dfa = start_dfa or dfa_state
 
             for nfa in dfa_state.states:    # type: NfaState
