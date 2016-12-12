@@ -64,7 +64,7 @@ def expect_parser_raise(string, exception=ParseError, msg=None):
 
 def test_paser_basic():
     ast = regex_from_string('^ab(a||b|)*|c$')
-    expected = Or(
+    assert ast == Or(
         Cat(
             Char(Token.BEGIN),
             Char('a'),
@@ -79,7 +79,10 @@ def test_paser_basic():
         ),
     )
 
-    assert ast == expected
+
+def test_parser_empty():
+    ast = regex_from_string('')
+    assert ast == Empty()
 
 
 def test_parser_unexpected_repeat():
@@ -164,6 +167,8 @@ def test_match_begin_star():
 
 def test_match_begin_dot():
     MT('.a.*', 'basdf', 5)
+    MT('.|[^a]|.|[^a]|.', 'aa', 1)
+    MT('aa|.|aa|.|aa|.', 'aa', 2)
 
 
 def test_match_begin_or():
@@ -172,6 +177,7 @@ def test_match_begin_or():
     MT('|a||b|', 'ab', 1)
     MT('|a||b|', '', 0)
     MT('|a||b|', 'ba', 1)
+    MT('|b|a|b|', 'ba', 1)
 
 
 def test_match_begin_bracket():

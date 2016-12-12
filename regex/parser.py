@@ -270,11 +270,10 @@ def parse_exp(tokens: TokenGen):
         elif ch is Token.RPAR:
             break
         else:
-            pass
+            assert False, 'impossible'
 
-    if len(ors) == 0:
-        return Empty()
-    elif len(ors) == 1:
+    assert len(ors) != 0
+    if len(ors) == 1:
         return ors[0]
     else:
         return Or(*ors)
