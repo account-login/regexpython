@@ -2,6 +2,9 @@ from regex.parser import Token, ast_from_string
 from regex.statemachine import ast_to_nfa, DfaState
 
 
+__all__ = ('Regex', 'compile', 'match_begin')
+
+
 class Regex:
     def __init__(self, string: str, dfa: DfaState):
         self.string, self.dfa = string, dfa
