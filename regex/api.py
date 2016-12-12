@@ -6,8 +6,8 @@ __all__ = ('Regex', 'compile', 'match_begin')
 
 
 class Regex:
-    def __init__(self, string: str, dfa: DfaState):
-        self.string, self.dfa = string, dfa
+    def __init__(self, pattern: str, dfa: DfaState):
+        self.pattern, self.dfa = pattern, dfa
 
     def match_begin(self, string: str) -> int:
         if len(string) == 0:
@@ -31,13 +31,17 @@ class Regex:
         return ans + 1
 
 
-def compile(string: str) -> Regex:
-    ast = ast_from_string(string)
+def compile(pattern: str) -> Regex:
+    ast = ast_from_string(pattern)
     nfa = ast_to_nfa(ast)
     dfa = DfaState.from_nfa(nfa)
-    return Regex(string, dfa)
+    return Regex(pattern, dfa)
 
 
 def match_begin(pattern: str, string: str) -> int:
     reg = compile(pattern)
     return reg.match_begin(string)
+
+
+def match_full(pattern: str, string: str) -> bool:
+    raise NotImplementedError
