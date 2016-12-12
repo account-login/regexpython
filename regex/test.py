@@ -157,6 +157,7 @@ MT = run_match_begin_test
 
 def test_match_begin_literal():
     MT('abc', 'abcd', 3)
+    MT('abc', 'axc', 0)
 
 
 def test_match_begin_star():
@@ -199,6 +200,21 @@ def test_match_begin_bracket_complement():
     MT('([^a-c]*|b)z', 'z', 1)
     MT('([^a-c]*|b)z', 'bz', 2)
     MT('([^a-c]*|b)z', 'bbz', 0)
+
+
+def test_match_end_string():
+    MT('a$', 'ad', 0)
+    MT('a$', 'a', 1)
+    MT('a$$', 'a', 1)
+    MT('a(b|$)$', 'a', 1)
+    MT('a(b|$)$', 'ab', 2)
+    MT('a(b|$)$', 'ac', 0)
+    MT('a(b|$)c$', 'a', 0)
+    MT('a$c', 'ac', 0)
+    MT('a($|b)c*', 'ac', 0)
+    MT('a($|b)c', 'ac', 0)
+    MT('a($|b)c*', 'abc', 3)
+    MT('a($|b)c*', 'a', 1)
 
 
 def test_ast_to_svg():

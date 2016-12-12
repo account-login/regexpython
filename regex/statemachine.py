@@ -1,7 +1,7 @@
 from collections import deque, namedtuple
 from itertools import chain
 
-from regex.parser import BaseNode, Char, CharRange, NotChars, Dot, Star, Cat, Or, Empty
+from regex.parser import BaseNode, Char, CharRange, NotChars, Dot, Star, Cat, Or, Empty, Token
 
 
 # TODO: handle range more effectly
@@ -9,6 +9,10 @@ from regex.parser import BaseNode, Char, CharRange, NotChars, Dot, Star, Cat, Or
 
 class NfaState:
     def __init__(self, char=None, not_chars=None, to=None, other=None, epsilon=None):
+        # combinations:
+        # char, to
+        # not_chars, other
+        # other
         self.char = char
         self.not_chars = not_chars
         self.to = to
@@ -32,14 +36,22 @@ class NfaPair(namedtuple('NfaPair', ('start', 'end'))):
         return DfaState.from_nfa(self)
 
 
-def ε_closure(nfas):
+def ε_closure(nfas, extra=None):
     """
     :type nfas: set[NfaState]
+    :type extra: set
     """
+    extra = extra or set()
+
+    def get_epsilons(nfa: NfaState):
+        yield from nfa.epsilon
+        if nfa.char in extra:
+            yield nfa.to
+
     ans = set(nfas)
     delta = ans
     while True:
-        delta = { d for d in chain.from_iterable(x.epsilon for x in delta)
+        delta = { d for d in chain.from_iterable(get_epsilons(x) for x in delta)
                   if d not in ans }
         if delta:
             ans.update(delta)
@@ -168,7 +180,8 @@ class CharToSet:
 
     def freeze(self):
         for ch, sset in self.chars.items():
-            self.chars[ch] = frozenset(ε_closure(sset))
+            extra = {Token.END}.intersection({ch})
+            self.chars[ch] = frozenset(ε_closure(sset, extra=extra))
         self.not_accept = frozenset(self.not_accept)
         self.other = frozenset(ε_closure(self.other))
 
