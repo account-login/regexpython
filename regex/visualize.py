@@ -1,8 +1,52 @@
 from itertools import chain
-import graphviz
+from graphviz import Digraph
 
 from regex.statemachine import NfaState, NfaPair, DfaState
+from regex.parser import BaseNode, Cat
 from regex.utils import make_serial
+
+
+def ast_to_gv(ast: BaseNode):
+    g = Digraph()
+    g.attr('node', width='0', height='0', shape='box', fontname='Fira Code')
+    ast._add_to_gv(g, make_serial())
+    return g
+
+
+def add_ast_node_to_gv(node: BaseNode, graph: Digraph, serial, parent_name=None, edge_opts=None):
+    name = 'N_{}'.format(serial())
+    graph.node(name, node._node_label())
+    if parent_name is not None:
+        graph.edge(parent_name, name, **(edge_opts or {}))
+
+    for c in node.children:
+        if isinstance(c, BaseNode):
+            c._add_to_gv(graph, serial, name)
+
+    return name
+
+
+def add_cat_node_to_gv(node: Cat, graph: Digraph, serial, parent_name=None, edge_opts=None):
+    root_name = 'N_{}'.format(serial())
+    graph.node(root_name, node._node_label())
+
+    child_names = []
+    prev_name = root_name
+    for i, ch in enumerate(node.children):
+        sub_edge_opts = dict(arrowhead='none') if i != 0 else {}
+        name = ch._add_to_gv(graph, serial, prev_name, edge_opts=sub_edge_opts)
+        child_names.append(name)
+        prev_name = name
+
+    subgraph = Digraph()
+    subgraph.attr('graph', rank='same')
+    for ch_name in child_names:
+        subgraph.node(ch_name)
+    graph.subgraph(subgraph)
+
+    if parent_name is not None:
+        graph.edge(parent_name, root_name, **(edge_opts or {}))
+    return root_name
 
 
 def nfa_labelize(nfa_pair: NfaPair):
@@ -34,7 +78,7 @@ def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
         nfa_labelize(nfa_pair)
 
     start, end = nfa_pair
-    g = graphviz.Digraph()
+    g = Digraph()
     g.attr('node', style='filled', width='0', height='0', shape='box', fontname='Fira Code')
 
     if start is end:
@@ -75,7 +119,7 @@ def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
 
 
 def dfa_to_gv(dfa_start: DfaState):
-    g = graphviz.Digraph()
+    g = Digraph()
     g.attr('node', style='filled', width='0', height='0', shape='box', fontname='Fira Code')
     has_fail_node = False
 

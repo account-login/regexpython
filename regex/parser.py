@@ -1,6 +1,4 @@
-import graphviz
-
-from regex.utils import make_serial, AutoNumber
+from regex.utils import AutoNumber
 
 
 class BufferedGen:
@@ -311,25 +309,15 @@ class BaseNode:
         return self.to_graphiviz()._repr_svg_()
 
     def to_graphiviz(self):
-        g = graphviz.Digraph()
-        g.attr('node', width='0', height='0', shape='box', fontname='Fira Code')
-        self._add_to_gv(g, make_serial())
-        return g
+        from regex.visualize import ast_to_gv
+        return ast_to_gv(self)
 
     def _node_label(self):
         return self.__class__.__name__
 
-    def _add_to_gv(self, graph: graphviz.Digraph, serial, parent_name=None, edge_opts=None):
-        name = 'N_{}'.format(serial())
-        graph.node(name, self._node_label())
-        if parent_name is not None:
-            graph.edge(parent_name, name, **(edge_opts or {}))
-
-        for c in self.children:
-            if isinstance(c, BaseNode):
-                c._add_to_gv(graph, serial, name)
-
-        return name
+    def _add_to_gv(self, graph, serial, parent_name=None, edge_opts=None):
+        from regex.visualize import add_ast_node_to_gv
+        return add_ast_node_to_gv(self, graph, serial, parent_name, edge_opts)
 
 
 class Empty(BaseNode):
@@ -376,27 +364,9 @@ class Star(BaseNode):
 
 
 class Cat(BaseNode):
-    def _add_to_gv(self, graph: graphviz.Digraph, serial, parent_name=None, edge_opts=None):
-        root_name = 'N_{}'.format(serial())
-        graph.node(root_name, self._node_label())
-
-        child_names = []
-        prev_name = root_name
-        for i, ch in enumerate(self.children):
-            sub_edge_opts = dict(arrowhead='none') if i != 0 else {}
-            name = ch._add_to_gv(graph, serial, prev_name, edge_opts=sub_edge_opts)
-            child_names.append(name)
-            prev_name = name
-
-        subgraph = graphviz.Digraph()
-        subgraph.attr('graph', rank='same')
-        for ch_name in child_names:
-            subgraph.node(ch_name)
-        graph.subgraph(subgraph)
-
-        if parent_name is not None:
-            graph.edge(parent_name, root_name, **(edge_opts or {}))
-        return root_name
+    def _add_to_gv(self, graph, serial, parent_name=None, edge_opts=None):
+        from regex.visualize import add_cat_node_to_gv
+        return add_cat_node_to_gv(self, graph, serial, parent_name, edge_opts)
 
 
 class Or(BaseNode):
