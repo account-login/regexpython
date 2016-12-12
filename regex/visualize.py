@@ -140,7 +140,7 @@ def dfa_to_gv(dfa_start: DfaState):
     for dfa in dfa_start.set_to_state.values():
         name = nfas2name[dfa.states]
         for ch, to in dfa.char_to_set.chars.items():
-            g.edge(name, nfas2name[to], ch)
+            g.edge(name, nfas2name[to], str(ch))
 
         for not_char in dfa.char_to_set.not_accept:
             if not has_fail_node:
