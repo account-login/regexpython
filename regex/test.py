@@ -149,29 +149,43 @@ def test_parser_bracket_bad_range():
 
 
 def run_match_begin_test(pattern, string, ans):
-    assert match_begin(pattern, string) is ans
+    assert match_begin(pattern, string) == ans
 
 MT = run_match_begin_test
 
 
 def test_match_begin_literal():
     MT('abc', 'abcd', 3)
-    MT('abc', 'axc', 0)
+    MT('abc', 'axc', -1)
 
 
-def test_match_begin_empty():
+def test_match_begin_empty_re_empty_string():
     MT('', '', 0)
     MT('^', '', 0)
     MT('$', '', 0)
     MT('^$', '', 0)
     MT('$^', '', 0)
+    MT('$^$^$^', '', 0)
+    MT('$.*^', '', 0)
+
+
+def test_match_begin_empty_re():
+    MT('', 'asdf', 0)
+    MT('^', 'asdf', 0)
+    MT('$', 'asdf', -1)
+    MT('^$', 'asdf', -1)
+    MT('$^', 'asdf', -1)
+
+
+def test_match_begin_empty_string():
+    MT('asdf', '', -1)
 
 
 def test_match_begin_star():
     MT('a*', 'aaaaa', 5)
     MT('a*b', 'bb', 1)
     MT('a*b', 'aaabb', 4)
-    MT('a*b', 'aaaa', 0)
+    MT('a*b', 'aaaa', -1)
 
 
 def test_match_begin_dot():
@@ -198,7 +212,7 @@ def test_match_begin_bracket():
 
 def test_match_begin_bracket_complement():
     MT('[^abc]*', '23ffsda', 6)
-    MT('([^a-c]|b)cd', 'acd', 0)
+    MT('([^a-c]|b)cd', 'acd', -1)
     MT('([^a-c]|b)cd', 'bcd', 3)
     MT('([^a-c]|b|[^b-z])cd', 'bcd', 3)
     MT('([^a-c]|[^b-z]|b)cd', 'bcd', 3)
@@ -206,20 +220,20 @@ def test_match_begin_bracket_complement():
     MT('([^b-z]|[^a-c]|b)cd', 'bcd', 3)
     MT('([^a-c]*|b)z', 'z', 1)
     MT('([^a-c]*|b)z', 'bz', 2)
-    MT('([^a-c]*|b)z', 'bbz', 0)
+    MT('([^a-c]*|b)z', 'bbz', -1)
 
 
 def test_match_begin_end_dollar():
-    MT('a$', 'ad', 0)
+    MT('a$', 'ad', -1)
     MT('a$', 'a', 1)
     MT('a$$', 'a', 1)
     MT('a(b|$)$', 'a', 1)
     MT('a(b|$)$', 'ab', 2)
-    MT('a(b|$)$', 'ac', 0)
-    MT('a(b|$)c$', 'a', 0)
-    MT('a$c', 'ac', 0)
-    MT('a($|b)c*', 'ac', 0)
-    MT('a($|b)c', 'ac', 0)
+    MT('a(b|$)$', 'ac', -1)
+    MT('a(b|$)c$', 'a', -1)
+    MT('a$c', 'ac', -1)
+    MT('a($|b)c*', 'ac', -1)
+    MT('a($|b)c', 'ac', -1)
     MT('a($|b)c*', 'abc', 3)
     MT('a($|b)c*', 'a', 1)
 
@@ -229,9 +243,9 @@ def test_match_begin_begin_caret():
     MT('^^a', 'a', 1)
     MT('^(b|^a)', 'a', 1)
     MT('c*^a', 'a', 1)
-    MT('c*^a', 'ca', 0)
-    MT('c^a', 'ca', 0)
-    MT('b*(^ba|bb)c', 'bbac', 0)
+    MT('c*^a', 'ca', -1)
+    MT('c^a', 'ca', -1)
+    MT('b*(^ba|bb)c', 'bbac', -1)
     MT('b*(^ba|bb)c', 'bac', 3)
     MT('b*(^ba|bb)c', 'bbc', 3)
 

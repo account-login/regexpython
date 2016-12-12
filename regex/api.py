@@ -10,25 +10,28 @@ class Regex:
         self.pattern, self.dfa = pattern, dfa
 
     def match_begin(self, string: str) -> int:
-        if len(string) == 0:
-            return 0
-
         dfa = self.dfa
-        ans = -1
+        if dfa.is_end():
+            last_match = -1
+        else:
+            last_match = -2
+
+        i = -1
         for i, ch in enumerate(string):
             dfa = dfa.follow(ch)
             if dfa is None:
-                return ans + 1
+                return last_match + 1
             else:
                 if dfa.is_end():
-                    ans = i
+                    last_match = i
 
-        if ans == -1:
+        assert dfa is not None
+        if not dfa.is_end():
             dfa = dfa.follow(Token.END)
             if dfa is not None and dfa.is_end():
-                ans = i
+                last_match = i
 
-        return ans + 1
+        return last_match + 1
 
     def match_full(self, string: str) -> bool:
         return self.match_begin(string) == len(string)
