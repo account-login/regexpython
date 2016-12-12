@@ -201,7 +201,7 @@ def test_match_begin_bracket_complement():
     MT('([^a-c]*|b)z', 'bbz', 0)
 
 
-def test_match_end_string():
+def test_match_begin_end_dollar():
     MT('a$', 'ad', 0)
     MT('a$', 'a', 1)
     MT('a$$', 'a', 1)
@@ -214,6 +214,18 @@ def test_match_end_string():
     MT('a($|b)c', 'ac', 0)
     MT('a($|b)c*', 'abc', 3)
     MT('a($|b)c*', 'a', 1)
+
+
+def test_match_begin_begin_caret():
+    MT('^a', 'a', 1)
+    MT('^^a', 'a', 1)
+    MT('^(b|^a)', 'a', 1)
+    MT('c*^a', 'a', 1)
+    MT('c*^a', 'ca', 0)
+    MT('c^a', 'ca', 0)
+    MT('b*(^ba|bb)c', 'bbac', 0)
+    MT('b*(^ba|bb)c', 'bac', 3)
+    MT('b*(^ba|bb)c', 'bbc', 3)
 
 
 def test_ast_to_svg():

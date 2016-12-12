@@ -212,7 +212,7 @@ class DfaState:
         set_to_state = dict()
         start_dfa = None
 
-        q = deque([ ε_closure({ start }) ])
+        q = deque([ ε_closure({ start }, extra={ Token.BEGIN }) ])
         while q:
             dfa_state = cls(set_to_state, end)
             dfa_state.states = q.popleft()
