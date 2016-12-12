@@ -144,62 +144,51 @@ def test_parser_bracket_bad_range():
     expect_parser_raise('[z-a]', BadRange)
 
 
-def run_match_begin_test(cases):
-    for pattern, string, ans in cases:
-        re = regex_from_string(pattern)
-        assert regex_match_begin(re, string) is ans
+def run_match_begin_test(pattern, string, ans):
+    re = regex_from_string(pattern)
+    assert regex_match_begin(re, string) is ans
+
+MT = run_match_begin_test
 
 
 def test_match_begin_literal():
-    run_match_begin_test([
-        ('abc', 'abcd', 3),
-    ])
+    MT('abc', 'abcd', 3)
 
 
 def test_match_begin_star():
-    run_match_begin_test([
-        ('a*', 'aaaaa', 5),
-        ('a*b', 'bb', 1),
-        ('a*b', 'aaabb', 4),
-        ('a*b', 'aaaa', 0),
-    ])
+    MT('a*', 'aaaaa', 5)
+    MT('a*b', 'bb', 1)
+    MT('a*b', 'aaabb', 4)
+    MT('a*b', 'aaaa', 0)
 
 
 def test_match_begin_dot():
-    run_match_begin_test([
-        ('.a.*', 'basdf', 5),
-    ])
+    MT('.a.*', 'basdf', 5)
 
 
 def test_match_begin_or():
-    run_match_begin_test([
-        ('a|cd', 'a', 1),
-        ('a|cd', 'cda', 2),
-        ('|a||b|', 'ab', 1),
-        ('|a||b|', '', 0),
-        ('|a||b|', 'ba', 1),
-    ])
+    MT('a|cd', 'a', 1)
+    MT('a|cd', 'cda', 2)
+    MT('|a||b|', 'ab', 1)
+    MT('|a||b|', '', 0)
+    MT('|a||b|', 'ba', 1)
 
 
 def test_match_begin_bracket():
-    run_match_begin_test([
-        ('[abc]*', 'bbaacad', 6),
-        ('[ab-]*', 'bbaacad', 4),
-        ('[a-c]*', 'bbaacad', 6),
-        ('[b-da-a]*', 'bbaacad', 7),
-    ])
+    MT('[abc]*', 'bbaacad', 6)
+    MT('[ab-]*', 'bbaacad', 4)
+    MT('[a-c]*', 'bbaacad', 6)
+    MT('[b-da-a]*', 'bbaacad', 7)
 
 
 def test_match_begin_bracket_complement():
-    run_match_begin_test([
-        ('[^abc]*', '23ffsda', 6),
-        ('([^a-c]|b)cd', 'acd', 0),
-        ('([^a-c]|b)cd', 'bcd', 3),
-        ('([^a-c]|b|[^b-z])cd', 'bcd', 3),
-        ('([^a-c]*|b)z', 'z', 1),
-        ('([^a-c]*|b)z', 'bz', 2),
-        ('([^a-c]*|b)z', 'bbz', 0),
-    ])
+    MT('[^abc]*', '23ffsda', 6)
+    MT('([^a-c]|b)cd', 'acd', 0)
+    MT('([^a-c]|b)cd', 'bcd', 3)
+    MT('([^a-c]|b|[^b-z])cd', 'bcd', 3)
+    MT('([^a-c]*|b)z', 'z', 1)
+    MT('([^a-c]*|b)z', 'bz', 2)
+    MT('([^a-c]*|b)z', 'bbz', 0)
 
 
 def test_ast_to_svg():
