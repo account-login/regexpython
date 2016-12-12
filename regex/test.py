@@ -201,18 +201,22 @@ def test_match_begin_bracket_complement():
 
 
 def test_ast_to_svg():
-    ast = regex_from_string('^ab(a||b|)*|c$')
+    ast = regex_from_string('^ab(a||b|[^a-c]|)*|c$')
     assert ast._repr_svg_().startswith('<?xml')
 
 
 def test_nfa_to_svg():
-    ast = regex_from_string('ab(a||b|)*|c')
+    ast = regex_from_string('ab(a||b|[^a-c]|)*|c')
+    nfa_pair = regex_to_nfa(ast)
+    assert nfa_pair._repr_svg_().startswith('<?xml')
+
+    ast = regex_from_string('')
     nfa_pair = regex_to_nfa(ast)
     assert nfa_pair._repr_svg_().startswith('<?xml')
 
 
 def test_dfa_to_svg():
-    ast = regex_from_string('ab(a||b|)*|c')
+    ast = regex_from_string('ab(a||b|[^a-c]|)*|c')
     nfa_pair = regex_to_nfa(ast)
     dfa = DfaState.from_nfa(nfa_pair)
     assert dfa._repr_svg_().startswith('<?xml')
