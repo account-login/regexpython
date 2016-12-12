@@ -58,13 +58,13 @@ def test_tokenizer_bracket_range():
 
 def expect_parser_raise(string, exception=ParseError, msg=None):
     with pytest.raises(exception) as exec_info:
-        regex_from_string(string)
+        ast_from_string(string)
     if msg is not None:
         assert msg in repr(exec_info.value)
 
 
 def test_paser_basic():
-    ast = regex_from_string('^ab(a||b|)*|c$')
+    ast = ast_from_string('^ab(a||b|)*|c$')
     assert ast == Or(
         Cat(
             Char(Token.BEGIN),
@@ -82,7 +82,7 @@ def test_paser_basic():
 
 
 def test_parser_empty():
-    ast = regex_from_string('')
+    ast = ast_from_string('')
     assert ast == Empty()
 
 
@@ -91,7 +91,7 @@ def test_parser_unexpected_repeat():
 
 
 def test_parser_bracket_basic():
-    ast = regex_from_string('[abc]')
+    ast = ast_from_string('[abc]')
     assert ast == Or(
         Char('a'),
         Char('b'),
@@ -110,23 +110,23 @@ def test_parser_bracket_not_closed():
 
 
 def test_parser_bracket_range():
-    ast = regex_from_string('[a-c]')
+    ast = ast_from_string('[a-c]')
     assert ast == CharRange(start='a', end='c')
 
-    ast = regex_from_string('[a-c-d]')
+    ast = ast_from_string('[a-c-d]')
     assert ast == Or(
         CharRange(start='a', end='c'),
         Char('-'),
         Char('d'),
     )
 
-    ast = regex_from_string('[a-]')
+    ast = ast_from_string('[a-]')
     assert ast == Or(
         Char('a'),
         Char('-'),
     )
 
-    ast = regex_from_string('[-a-]')
+    ast = ast_from_string('[-a-]')
     assert ast == Or(
         Char('-'),
         Char('a'),
@@ -135,7 +135,7 @@ def test_parser_bracket_range():
 
 
 def test_parser_bracket_complement():
-    ast = regex_from_string('[^-ac-d-]')
+    ast = ast_from_string('[^-ac-d-]')
     assert ast == NotChars(
         Char('-'),
         Char('a'),
@@ -149,8 +149,7 @@ def test_parser_bracket_bad_range():
 
 
 def run_match_begin_test(pattern, string, ans):
-    re = regex_from_string(pattern)
-    assert match_begin(re, string) is ans
+    assert match_begin(pattern, string) is ans
 
 MT = run_match_begin_test
 
@@ -218,22 +217,22 @@ def test_match_end_string():
 
 
 def test_ast_to_svg():
-    ast = regex_from_string('^ab(a||b|[^a-c]|)*|c$')
+    ast = ast_from_string('^ab(a||b|[^a-c]|)*|c$')
     assert ast._repr_svg_().startswith('<?xml')
 
 
 def test_nfa_to_svg():
-    ast = regex_from_string('ab(a||b|[^a-c]|)*|c')
-    nfa_pair = regex_to_nfa(ast)
+    ast = ast_from_string('ab(a||b|[^a-c]|)*|c')
+    nfa_pair = ast_to_nfa(ast)
     assert nfa_pair._repr_svg_().startswith('<?xml')
 
-    ast = regex_from_string('')
-    nfa_pair = regex_to_nfa(ast)
+    ast = ast_from_string('')
+    nfa_pair = ast_to_nfa(ast)
     assert nfa_pair._repr_svg_().startswith('<?xml')
 
 
 def test_dfa_to_svg():
-    ast = regex_from_string('ab(a||b|[^a-c]|)*|c')
-    nfa_pair = regex_to_nfa(ast)
+    ast = ast_from_string('ab(a||b|[^a-c]|)*|c')
+    nfa_pair = ast_to_nfa(ast)
     dfa = DfaState.from_nfa(nfa_pair)
     assert dfa._repr_svg_().startswith('<?xml')

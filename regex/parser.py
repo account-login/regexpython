@@ -288,7 +288,7 @@ def parse(tokens: TokenGen):
         return exp
 
 
-def regex_from_string(string):
+def ast_from_string(string):
     tokens = TokenGen(tokenize(BufferedGen(iter(string))))
     return parse(tokens)
 

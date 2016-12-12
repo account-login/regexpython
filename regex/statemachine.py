@@ -59,16 +59,16 @@ def ε_closure(nfas, extra=None):
             return ans
 
 
-def regex_to_nfa(re: BaseNode) -> NfaPair:
-    if isinstance(re, Char):
+def ast_to_nfa(node: BaseNode) -> NfaPair:
+    if isinstance(node, Char):
         end = NfaState()
-        start = NfaState(char=re.children[0], to=end)
+        start = NfaState(char=node.children[0], to=end)
         return NfaPair(start, end)
-    elif isinstance(re, CharRange):
-        return regex_to_nfa(Or(*re))
-    elif isinstance(re, NotChars):
+    elif isinstance(node, CharRange):
+        return ast_to_nfa(Or(*node))
+    elif isinstance(node, NotChars):
         children_expanded = set()
-        for child in re.children:
+        for child in node.children:
             if isinstance(child, Char):
                 children_expanded.add(child.children[0])
             elif isinstance(child, CharRange):
@@ -80,21 +80,21 @@ def regex_to_nfa(re: BaseNode) -> NfaPair:
         end = NfaState()
         start = NfaState(not_chars=children_expanded, other=end)
         return NfaPair(start, end)
-    elif isinstance(re, Dot):
+    elif isinstance(node, Dot):
         end = NfaState()
         start = NfaState(other=end)
         return NfaPair(start, end)
-    elif isinstance(re, Star):
-        sub_start, sub_end = regex_to_nfa(re.children[0])
+    elif isinstance(node, Star):
+        sub_start, sub_end = ast_to_nfa(node.children[0])
         sub_start.epsilon.add(sub_end)
         sub_end.epsilon.add(sub_start)
 
         return NfaPair(sub_start, sub_end)
-    elif isinstance(re, Cat):
-        assert len(re.children) > 0
+    elif isinstance(node, Cat):
+        assert len(node.children) > 0
         start = None
         prev_e = None
-        for s, e in map(regex_to_nfa, re.children):
+        for s, e in map(ast_to_nfa, node.children):
             if start is None:
                 start = s
             if prev_e is not None:
@@ -102,16 +102,16 @@ def regex_to_nfa(re: BaseNode) -> NfaPair:
             prev_e = e
 
         return NfaPair(start, e)
-    elif isinstance(re, Or):
-        assert len(re.children) > 0
+    elif isinstance(node, Or):
+        assert len(node.children) > 0
         start = NfaState()
         end = NfaState()
-        for s, e in map(regex_to_nfa, re.children):
+        for s, e in map(ast_to_nfa, node.children):
             start.epsilon.add(s)
             e.epsilon.add(end)
 
         return NfaPair(start, end)
-    elif isinstance(re, Empty):
+    elif isinstance(node, Empty):
         end = NfaState()
         return NfaPair(end, end)
     else:
