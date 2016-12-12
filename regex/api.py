@@ -2,7 +2,7 @@ from regex.parser import Token, ast_from_string
 from regex.statemachine import ast_to_nfa, DfaState
 
 
-__all__ = ('Regex', 'compile', 'match_begin')
+__all__ = ('Regex', 'compile', 'match_begin', 'match_full')
 
 
 class Regex:
@@ -30,6 +30,9 @@ class Regex:
 
         return ans + 1
 
+    def match_full(self, string: str) -> bool:
+        return self.match_begin(string) == len(string)
+
 
 def compile(pattern: str) -> Regex:
     ast = ast_from_string(pattern)
@@ -44,4 +47,5 @@ def match_begin(pattern: str, string: str) -> int:
 
 
 def match_full(pattern: str, string: str) -> bool:
-    raise NotImplementedError
+    reg = compile(pattern)
+    return reg.match_full(string)

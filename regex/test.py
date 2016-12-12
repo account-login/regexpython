@@ -228,6 +228,11 @@ def test_match_begin_begin_caret():
     MT('b*(^ba|bb)c', 'bbc', 3)
 
 
+def test_match_full():
+    assert match_full('asdf', 'asdf')
+    assert match_full('.*', '')
+
+
 def test_ast_to_svg():
     ast = ast_from_string('^ab(a||b|[^a-c]|)*|c$')
     assert ast._repr_svg_().startswith('<?xml')
