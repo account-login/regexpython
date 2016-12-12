@@ -252,7 +252,9 @@ def test_match_begin_begin_caret():
 
 def test_match_full():
     assert match_full('asdf', 'asdf')
+    assert not match_full('asdf', '')
     assert match_full('.*', '')
+    assert match_full('', '')
 
 
 def test_ast_to_svg():

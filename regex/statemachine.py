@@ -195,6 +195,7 @@ class DfaState:
         self.set_to_state = set_to_state
         self.end = end
         self.states = set()
+        self.match_empty = None
 
     def __repr__(self):
         return repr(self.states)
@@ -212,11 +213,10 @@ class DfaState:
         set_to_state = dict()
         start_dfa = None
 
-        q = [ ε_closure({ start }, extra={ Token.BEGIN }) ]
+        q = [ ε_closure({start}, extra={Token.BEGIN}) ]
         while q:
             dfa_state = cls(set_to_state, end)
             dfa_state.states = q.pop()
-            start_dfa = start_dfa or dfa_state
 
             for nfa in dfa_state.states:    # type: NfaState
                 if nfa.char is not None:
@@ -226,7 +226,7 @@ class DfaState:
                 elif nfa.other:
                     dfa_state.char_to_set.add_other(nfa.other)
 
-            dfa_state.freeze()
+            dfa_state.freeze()  # convert set to frozenset in order to work with hashtable
             set_to_state[dfa_state.states] = dfa_state
 
             for nfas in dfa_state.char_to_set.chars.values():
@@ -235,6 +235,14 @@ class DfaState:
             if dfa_state.char_to_set.other and dfa_state.char_to_set.other not in set_to_state:
                 q.append(dfa_state.char_to_set.other)
 
+            if start_dfa is None:
+                start_dfa = dfa_state
+                # special case for matching empty string
+                # both Token.BEGIN and Token.END should be considered epsilon
+                start_dfa.match_empty = end in ε_closure(
+                    start_dfa.states, extra={Token.BEGIN, Token.END})
+
+        assert start_dfa.match_empty is not None
         return start_dfa
 
     def follow(self, char):

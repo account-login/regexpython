@@ -10,13 +10,23 @@ class Regex:
         self.pattern, self.dfa = pattern, dfa
 
     def match_begin(self, string: str) -> int:
+        # empty string is a special case, must be determined be DfaState.match_empy
+        # eg: test case "$^" matches ""
+        if string == '':
+            if self.dfa.match_empty:
+                return 0
+            else:
+                return -1
+
         dfa = self.dfa
         if dfa.is_end():
+            # can match zero length prefix, return 0
             last_match = -1
         else:
+            # return -1 on no matching prefix
             last_match = -2
 
-        i = -1
+        i = -1  # remove used before assignment warning
         for i, ch in enumerate(string):
             dfa = dfa.follow(ch)
             if dfa is None:
