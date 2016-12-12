@@ -104,7 +104,7 @@ def tokenize(chars: BufferedGen):
             if ch == '\\':
                 tok = read_escape(chars)
             elif ch == ']':
-                if prev is Token.LBRACKET:
+                if prev in (Token.LBRACKET, Token.NOT):
                     # empty bracket not allowed, left bracket must follow a regular char.
                     tok = ch
                 else:
@@ -173,43 +173,46 @@ def parse_par(tokens: TokenGen):
 
 def parser_bracket(tokens: TokenGen):
     tokens.eat(Token.LBRACKET)
-    tok = tokens.peek()
-    if tok is Token.NOT:
-        # TODO:
-        raise NotImplementedError
-    else:
-        ors = []
-        while True:
-            tok = tokens.get()
-            if tok is Token.RBRACKET:
-                if len(ors) == 0:
-                    assert False, 'impossible'
-                elif len(ors) == 1:
+    complement = tokens.peek() is Token.NOT
+    if complement:
+        tokens.eat(Token.NOT)
+
+    ors = []
+    while True:
+        tok = tokens.get()
+        if tok is Token.RBRACKET:
+            if len(ors) == 0:
+                assert False, 'impossible'
+
+            if complement:
+                return NotChars(*ors)
+            else:
+                if len(ors) == 1:
                     return ors[0]
                 else:
                     return Or(*ors)
-            elif tok is Token.EOF:
-                raise UnexpectedEOF()
-            elif tok is Token.DASH:
-                if len(ors) == 0:
-                    ors.append(Char('-'))
-                else:
-                    next_tok = tokens.peek()
-                    if next_tok is Token.RBRACKET:
-                        ors.append(Char('-'))
-                    elif next_tok is Token.EOF:
-                        raise UnexpectedEOF(expect=Token.RBRACKET)
-                    else:
-                        if isinstance(ors[-1], Char):
-                            ors[-1] = CharRange(start=ors[-1].children[0], end=tokens.get())
-                        else:
-                            # TODO: possible bad range error
-                            ors.append(Char('-'))
-            elif isinstance(tok, str):
-                assert len(tok) == 1
-                ors.append(Char(tok))
+        elif tok is Token.EOF:
+            raise UnexpectedEOF()
+        elif tok is Token.DASH:
+            if len(ors) == 0:
+                ors.append(Char('-'))
             else:
-                raise NotImplementedError
+                next_tok = tokens.peek()
+                if next_tok is Token.RBRACKET:
+                    ors.append(Char('-'))
+                elif next_tok is Token.EOF:
+                    raise UnexpectedEOF(expect=Token.RBRACKET)
+                else:
+                    if isinstance(ors[-1], Char):
+                        ors[-1] = CharRange(start=ors[-1].children[0], end=tokens.get())
+                    else:
+                        # TODO: possible bad range error
+                        ors.append(Char('-'))
+        elif isinstance(tok, str):
+            assert len(tok) == 1
+            ors.append(Char(tok))
+        else:
+            raise NotImplementedError
 
 
 def parse_cat(tokens: TokenGen):
@@ -361,9 +364,8 @@ class CharRange(BaseNode):
             yield Char(chr(codepoint))
 
 
-class NotChar(BaseNode):
-    def _node_label(self):
-        return '^%c' % self.children[0]
+class NotChars(BaseNode):
+    pass
 
 
 class Dot(BaseNode):

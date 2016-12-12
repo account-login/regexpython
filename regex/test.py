@@ -34,6 +34,9 @@ def test_tokenizer_bracket_non_empty():
     tokens = token_list_from_string('[]')
     assert tokens == [Token.LBRACKET, ']', Token.EOF]
 
+    tokens = token_list_from_string('[^]')
+    assert tokens == [Token.LBRACKET, Token.NOT, ']', Token.EOF]
+
     tokens = token_list_from_string('[]]')
     assert tokens == [Token.LBRACKET, ']', Token.RBRACKET, Token.EOF]
 
@@ -94,6 +97,7 @@ def test_parser_bracket_basic():
 
 def test_perser_bracket_empty():
     expect_parser_raise('[]', UnexpectedEOF)
+    expect_parser_raise('[^]', UnexpectedEOF)
 
 
 def test_parser_bracket_not_closed():
@@ -122,6 +126,16 @@ def test_parser_bracket_range():
     assert ast == Or(
         Char('-'),
         Char('a'),
+        Char('-'),
+    )
+
+
+def test_parser_bracket_complement():
+    ast = regex_from_string('[^-ac-d-]')
+    assert ast == NotChars(
+        Char('-'),
+        Char('a'),
+        CharRange(start='c', end='d'),
         Char('-'),
     )
 
