@@ -1,5 +1,6 @@
 import pytest
 
+from regex.api import *
 from regex.parser import *
 from regex.statemachine import *
 from regex.visualize import *
@@ -149,7 +150,7 @@ def test_parser_bracket_bad_range():
 
 def run_match_begin_test(pattern, string, ans):
     re = regex_from_string(pattern)
-    assert regex_match_begin(re, string) is ans
+    assert match_begin(re, string) is ans
 
 MT = run_match_begin_test
 
