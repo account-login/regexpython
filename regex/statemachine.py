@@ -132,21 +132,27 @@ class CharToSet:
             self.chars[char] = self.other.union({ dest })
 
     def add_not_chars(self, not_chars: set, other):
+        common_with_chars = not_chars.intersection(set(self.chars.keys()))
+        if self.other:
+            common_with_not_accept = not_chars.intersection(self.not_accept)
+        else:
+            assert not self.not_accept
+            common_with_not_accept = not_chars - common_with_chars
+
+        common_with_other = not_chars - common_with_not_accept - common_with_chars
+        for co in common_with_other:
+            assert co not in self.chars
+            self.chars[co] = set(self.other)
+
         for ch, sset in self.chars.items():
-            if ch not in not_chars:
+            if ch not in common_with_chars:
                 sset.add(other)
 
-        for ch in self.not_accept:
-            if ch not in not_chars:
-                self.chars[ch] = { other }
+        for na in self.not_accept - common_with_not_accept:
+            assert na not in self.chars
+            self.chars[na] = { other }
 
-        self.not_accept = self.not_accept.intersection(not_chars)   # type: set
-        if self.other:
-            for nc in not_chars:
-                self.chars[nc] = set(self.other)
-        else:
-            self.not_accept.update(not_chars - set(self.chars.keys()))
-
+        self.not_accept = common_with_not_accept
         self.other.add(other)
 
     def add_other(self, other):
