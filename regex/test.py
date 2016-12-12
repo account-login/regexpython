@@ -159,6 +159,14 @@ def test_match_begin_literal():
     MT('abc', 'axc', 0)
 
 
+def test_match_begin_empty():
+    MT('', '', 0)
+    MT('^', '', 0)
+    MT('$', '', 0)
+    MT('^$', '', 0)
+    MT('$^', '', 0)
+
+
 def test_match_begin_star():
     MT('a*', 'aaaaa', 5)
     MT('a*b', 'bb', 1)
