@@ -10,20 +10,16 @@ class TokenGen(BufferedGen):
 
     def get(self) -> Token:
         if not self.eof:
-            try:
-                ret = super().get()
-            except StopIteration:
+            ret = super().get()
+            if ret.type is Token.EOF:
                 self.eof = True
-            else:
-                if ret.type is Token.EOF:
-                    self.eof = True
 
         if self.eof:
             return Token.EOF()
         else:
             return ret
 
-    def eat(self, expect: 'Token'=None):
+    def eat(self, expect: Token=None):
         assert expect.type is not Token.EOF
         tok = self.get()
         if tok.type is Token.EOF:
@@ -69,15 +65,20 @@ def parser_bracket(tokens: TokenGen):
                     ors.append(Char('-'))
                 elif next_tok.type is Token.EOF:
                     raise UnexpectedEOF(expect=Token.RBRACKET())
-                else:
-                    if isinstance(ors[-1], Char):
+                elif next_tok.type is Token.CHAR:
+                    if isinstance(ors[-1], CharRange):
+                        ors.append(Char('-'))
+                    elif isinstance(ors[-1], Char):
                         ors[-1] = CharRange(start=ors[-1].children[0], end=tokens.get().value)
                     else:
-                        # TODO: possible bad range error
-                        ors.append(Char('-'))
+                        raise BadRange('not character type')
+                else:
+                    raise BadRange('not character type')
         elif tok.type is tok.CHAR:
             assert len(tok.value) == 1
             ors.append(Char(tok.value))
+        elif tok.type is tok.ESCAPE:
+            ors.append(lookup_escape(tok))
         else:
             raise NotImplementedError
 
@@ -115,6 +116,9 @@ def parse_cat(tokens: TokenGen):
         elif tok.type is Token.CHAR:
             assert isinstance(tok.value, str) and len(tok.value) == 1
             cats.append(Char(tok.value))
+            tokens.eat(tok)
+        elif tok.type is Token.ESCAPE:
+            cats.append(lookup_escape(tok))
             tokens.eat(tok)
         else:
             assert tok.type in (Token.RBRACKET, Token.NOT)
@@ -209,8 +213,7 @@ class CharRange(BaseNode):
         assert len(args) == 0
         super().__init__(*args)
         for ch in (start, end):
-            if not isinstance(ch, str) and len(ch) == 1:
-                raise BadRange('not character type')
+            assert isinstance(ch, str) and len(ch) == 1
         if ord(end) < ord(start):
             raise BadRange('reversed range')
         self.start, self.end = start, end
@@ -251,3 +254,23 @@ class Cat(BaseNode):
 
 class Or(BaseNode):
     pass
+
+
+def lookup_escape(tok: Token) -> BaseNode:
+    if tok.value in PREDEFINED_RANGE:
+        return PREDEFINED_RANGE[tok.value]
+    elif tok.value in 'bB':
+        raise NotImplementedError
+    else:
+        assert False, 'impossible'
+
+
+# TODO: unicode mode
+PREDEFINED_RANGE = {
+    'w': ast_from_string('[a-zA-Z0-9_]'),
+    'W': ast_from_string('[^a-zA-Z0-9_]'),
+    's': ast_from_string('[ \\t\\n\\r\\f\\v]'),
+    'S': ast_from_string('[^ \\t\\n\\r\\f\\v]'),
+    'd': ast_from_string('[0-9]'),
+    'D': ast_from_string('[^0-9]'),
+}

@@ -2,9 +2,10 @@ import pytest
 
 from regex.api import *
 from regex.parser import *
+from regex.tokenizer import *
 from regex.statemachine import *
-from regex.tokenizer import Token, tokenize
-from regex.utils import BufferedGen
+from regex.utils import *
+from regex.errors import *
 from regex.visualize import *
 
 
@@ -16,6 +17,8 @@ def simplified_tokens(string):
     def transform(tok):
         if tok.type is Token.CHAR:
             return tok.value
+        elif tok.type in (Token.ESCAPE,):
+            return tok
         else:
             return tok.type
 
@@ -73,14 +76,46 @@ def test_tokenizer_escape_constant():
     assert tokens == list('\a\f\n\r\t\v\\') + [Token.EOF]
 
 
-def test_tokenizer_escape_unicode():
+def test_tokenizer_escape_hex():
     tokens = simplified_tokens('\\x11\\u1234\\U00004321')
     assert tokens == list('\x11\u1234\U00004321') + [Token.EOF]
+
+
+def test_tokenizer_escape_bad_hex():
+    # actually raised from tokenizer
+    expect_parser_raise('\\x1', IllegalEscape)
+    expect_parser_raise('\\xfg', IllegalEscape)
+    expect_parser_raise('\\uff0', IllegalEscape)
+    expect_parser_raise('\\Uff00ff0g', IllegalEscape)
+    expect_parser_raise('[\\x1]', IllegalEscape)
+    expect_parser_raise('[\\x1', IllegalEscape)
+
+
+def test_tokenizer_escape_bB():
+    tokens = simplified_tokens('\\b\\B[\\b\\B]')
+    assert tokens == [
+        Token.ESCAPE('b'), Token.ESCAPE('B'),
+        Token.LBRACKET, '\b', 'B', Token.RBRACKET, Token.EOF,
+    ]
 
 
 def test_tokenizer_escape_AZ():
     tokens = simplified_tokens('\\A\\Z')
     assert tokens == [Token.BEGIN, Token.END, Token.EOF]
+
+
+def test_tokenizer_escape_wsd():
+    tokens = simplified_tokens('\\w\\W\\s\\S\\d\\D')
+    assert tokens == list(map(Token.ESCAPE , 'wWsSdD')) + [Token.EOF]
+
+    tokens = simplified_tokens('[\\w\\W\\s\\S\\d\\D]')
+    assert tokens == (
+        [Token.LBRACKET] + list(map(Token.ESCAPE , 'wWsSdD')) + [Token.RBRACKET, Token.EOF])
+
+
+def test_tokenizer_escape_undefined():
+    tokens = simplified_tokens('\\q\\e\\y\\i')
+    assert tokens == list('qeyi') + [Token.EOF]
 
 
 def expect_parser_raise(string, exception=ParseError, *, msg=None):
@@ -189,7 +224,14 @@ def test_parser_bracket_complement():
 
 
 def test_parser_bracket_bad_range():
-    expect_parser_raise('[z-a]', BadRange)
+    expect_parser_raise('[z-a]', BadRange, msg='reversed range')
+    expect_parser_raise('[\w-a]', BadRange, msg='not character type')
+    expect_parser_raise('[a-\w]', BadRange, msg='not character type')
+    expect_parser_raise('[\s-\w]', BadRange, msg='not character type')
+
+
+def test_parser_predefined_range():
+    assert ast_from_string('\\w\\d') == ast_from_string('[a-zA-Z0-9_][0-9]')
 
 
 def run_match_begin_test(pattern, string, ans):
@@ -305,6 +347,16 @@ def test_match_begin_begin_caret():
     MT('b*(^ba|bb)c', 'bbac', -1)
     MT('b*(^ba|bb)c', 'bac', 3)
     MT('b*(^ba|bb)c', 'bbc', 3)
+
+
+def test_match_begin_constant():
+    MT('[\\a\\b\\f\\n\\r\\t\\v\\\\]*', ''.join(reversed('\a\b\f\n\r\t\v\\' * 2)), 16)
+
+
+def test_match_begin_predefined_range():
+    # MT('\w*', 'af04_b-', 6)   # FIXME: it takes 10s to compile!!!
+    MT('\w', 'a', 1)
+    MT('\s*', ' \t\n\r　', 4)
 
 
 def test_match_full():

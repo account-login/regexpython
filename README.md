@@ -21,6 +21,7 @@ Regular expression engine in Python.
     * begin, end `\A`, `\Z`
     * constant `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, `\\`
     * character `\xhh`, `\uhhhh`, `\Uhhhhhhhh`
+    * predifined range `\d\D`, `\s\S`, `\w\W`
 
 ### API
 
@@ -35,8 +36,7 @@ TBA
 - zero length assertions
 - escapes
     * group number `\1`
-    * boundary `\b`
-    * predifined range `\d`, `\s`, `\w`
+    * boundary `\b\B`
 - various compilation flags
 - missing APIs
     * `search`

@@ -36,6 +36,7 @@ class Token(metaclass=TokenMeta):
 
     DOT = ()        # type: TokenMeta
     CHAR = ()       # type: TokenMeta
+    ESCAPE = ()    # type: TokenMeta
 
     BEGIN = ()      # type: TokenMeta
     END = ()        # type: TokenMeta
@@ -78,7 +79,12 @@ def read_escape(chars: BufferedGen, in_bracket: bool) -> Token:
         if in_bracket:
             return Token.CHAR('\b')
         else:
-            raise NotImplementedError
+            return Token.ESCAPE(ch)
+    elif ch == 'B':
+        if in_bracket:
+            return Token.CHAR(ch)
+        else:
+            return Token.ESCAPE(ch)
     if ch in ascii_escpes:
         return Token.CHAR(ascii_escpes[ch])
     elif ch == 'A':
@@ -91,8 +97,12 @@ def read_escape(chars: BufferedGen, in_bracket: bool) -> Token:
         if not check_hex_digits(digits):
             raise IllegalEscape('\\' + ch + ''.join(digits))
         return Token.CHAR(chr(int(''.join(digits), base=16)))
-    else:
+    elif ch in 'wWsSdD':
+        return Token.ESCAPE(ch)
+    elif ch.isdecimal():
         raise NotImplementedError
+    else:
+        return Token.CHAR(ch)
 
 
 def tokenize(chars: BufferedGen):
