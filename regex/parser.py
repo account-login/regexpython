@@ -8,7 +8,7 @@ class TokenGen(BufferedGen):
         super().__init__(gen)
         self.eof = False
 
-    def get(self) -> 'Token':
+    def get(self) -> Token:
         if not self.eof:
             try:
                 ret = super().get()

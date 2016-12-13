@@ -1,5 +1,8 @@
 
 
+__all__ = ('ParseError', 'BadRange', 'IllegalEscape', 'UnexpectedToken', 'UnexpectedEOF')
+
+
 class ParseError(Exception):
     pass
 
