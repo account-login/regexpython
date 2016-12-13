@@ -56,6 +56,21 @@ def test_tokenizer_bracket_range():
     assert tokens == [Token.LBRACKET, Token.DASH, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
 
+def test_tokenizer_escape_constant():
+    tokens = token_list_from_string('\\a\\f\\n\\r\\t\\v\\\\')
+    assert tokens == list('\a\f\n\r\t\v\\') + [Token.EOF]
+
+
+def test_tokenizer_escape_unicode():
+    tokens = token_list_from_string('\\x11\\u1234\\U00004321')
+    assert tokens == list('\x11\u1234\U00004321') + [Token.EOF]
+
+
+def test_tokenizer_escape_AZ():
+    tokens = token_list_from_string('\\A\\Z')
+    assert tokens == [Token.BEGIN, Token.END, Token.EOF]
+
+
 def expect_parser_raise(string, exception=ParseError, *, msg=None):
     with pytest.raises(exception) as exec_info:
         ast_from_string(string)

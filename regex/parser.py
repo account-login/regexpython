@@ -73,9 +73,46 @@ class Token(AutoNumber):
     EOF = ()
 
 
-def read_escape(chars: BufferedGen):
-    # TODO:
-    return chars.get()
+def read_escape(chars: BufferedGen, in_bracket: bool):
+    ascii_escpes = {
+        'a': '\a',
+        # 'b': '\b',
+        'f': '\f',
+        'n': '\n',
+        'r': '\r',
+        't': '\t',
+        'v': '\v',
+        '\\': '\\',
+    }
+
+    def check_hex_digits(digits):
+        for d in digits:
+            if d not in '0123456789abcdef':
+                return False
+        else:
+            return True
+
+    ch = chars.get()
+
+    if ch == 'b':
+        if in_bracket:
+            return '\b'
+        else:
+            raise NotImplementedError
+    if ch in ascii_escpes:
+        return ascii_escpes[ch]
+    elif ch == 'A':
+        return Token.BEGIN
+    elif ch == 'Z':
+        return Token.END
+    elif ch in 'xuU':
+        digits_num = {'x': 2, 'u': 4, 'U': 8}[ch]
+        digits = [ chars.get().lower() for _ in range(digits_num) ]
+        if not check_hex_digits(digits):
+            raise IllegalEscape('\\' + ch + ''.join(digits))
+        return chr(int(''.join(digits), base=16))
+    else:
+        raise NotImplementedError
 
 
 def tokenize(chars: BufferedGen):
@@ -104,7 +141,10 @@ def tokenize(chars: BufferedGen):
 
         if in_bracket:
             if ch == '\\':
-                tok = read_escape(chars)
+                try:
+                    tok = read_escape(chars, in_bracket)
+                except StopIteration:
+                    raise IllegalEscape
             elif ch == ']':
                 if prev in (Token.LBRACKET, Token.NOT):
                     # empty bracket not allowed, left bracket must follow a regular char.
@@ -128,7 +168,10 @@ def tokenize(chars: BufferedGen):
                 in_bracket = True
                 tok = Token.LBRACKET
             elif ch == '\\':
-                tok = read_escape(chars)
+                try:
+                    tok = read_escape(chars, in_bracket)
+                except StopIteration:
+                    raise IllegalEscape
             else:
                 tok = ch
 
@@ -142,6 +185,17 @@ class ParseError(Exception):
 
 class BadRange(ParseError):
     pass
+
+
+class IllegalEscape(ParseError):
+    def __init__(self, string=None):
+        super().__init__(string)
+        self.string = string
+
+    def __repr__(self):
+        return '<{name} {id:#x} string={string}>'.format(
+            name=self.__class__.__name__, id=id(self), string=self.string
+        )
 
 
 class UnexpectedToken(ParseError):

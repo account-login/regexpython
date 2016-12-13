@@ -17,6 +17,10 @@ Regular expression engine in Python.
     * range `[a-z0-9]`
 - or `a|b`
 - parentheses `(...)`
+- escapes
+    * begin, end `\A`, `\Z`
+    * constant `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, `\\`
+    * character `\xhh`, `\uhhhh`, `\Uhhhhhhhh`
 
 ### API
 
@@ -29,13 +33,10 @@ TBA
 - non-greedy qualifier `*?`, `+?`, `??`, `x{a,b}?`
 - repeat `x{a}`, `x{a,}`, `x{a,b}`
 - zero length assertions
-- escape `\x`
+- escapes
     * group number `\1`
-    * begin, end `\A`, `\Z`
     * boundary `\b`
     * predifined range `\d`, `\s`, `\w`
-    * constant `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, `\\`
-    * character `\xhh`, `\uhhhh`
 - various compilation flags
 - missing APIs
     * `search`
