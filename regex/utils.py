@@ -1,5 +1,4 @@
 import itertools
-from enum import Enum
 
 
 def make_serial():
@@ -7,9 +6,21 @@ def make_serial():
     return lambda: next(gen)
 
 
-class AutoNumber(Enum):
-    def __new__(cls):
-        value = len(cls.__members__) + 1
-        obj = object.__new__(cls)
-        obj._value_ = value
-        return obj
+class BufferedGen:
+    def __init__(self, gen):
+        self.gen = gen
+        self.buffer = []
+
+    def peek(self):
+        ret = self.get()
+        self.unget(ret)
+        return ret
+
+    def get(self):
+        if self.buffer:
+            return self.buffer.pop()
+        else:
+            return next(self.gen)
+
+    def unget(self, item):
+        self.buffer.append(item)

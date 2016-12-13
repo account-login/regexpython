@@ -1,4 +1,5 @@
-from regex.parser import Token, ast_from_string
+from regex.parser import ast_from_string
+from regex.tokenizer import Token
 from regex.statemachine import ast_to_nfa, DfaState
 
 

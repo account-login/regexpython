@@ -3,8 +3,9 @@ from itertools import chain
 
 from regex.parser import (
     BaseNode, Char, CharRange, NotChars, Dot,
-    Star, Plus, Question, Cat, Or, Empty, Token,
+    Star, Plus, Question, Cat, Or, Empty,
 )
+from regex.tokenizer import Token
 
 
 # TODO: handle range more effectly

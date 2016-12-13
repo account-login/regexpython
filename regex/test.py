@@ -3,6 +3,8 @@ import pytest
 from regex.api import *
 from regex.parser import *
 from regex.statemachine import *
+from regex.tokenizer import Token, tokenize
+from regex.utils import BufferedGen
 from regex.visualize import *
 
 
