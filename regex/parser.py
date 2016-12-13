@@ -145,8 +145,9 @@ class BadRange(ParseError):
 
 
 class UnexpectedToken(ParseError):
-    def __init__(self, got, expect=None, msg=None):
-        super().__init__(msg, got, expect)
+    def __init__(self, *, got, expect=None, msg=None):
+        msg = msg or ''
+        super().__init__(msg, dict(got=got, expect=expect))
         self.got = got
         self.expect = expect
         self.msg = msg
@@ -158,7 +159,7 @@ class UnexpectedToken(ParseError):
 
 
 class UnexpectedEOF(UnexpectedToken):
-    def __init__(self, got=None, expect=None, msg=None):
+    def __init__(self, *, got=None, expect=None, msg=None):
         if got is not None:
             assert got is Token.EOF
         else:

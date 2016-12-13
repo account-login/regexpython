@@ -56,7 +56,7 @@ def test_tokenizer_bracket_range():
     assert tokens == [Token.LBRACKET, Token.DASH, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
 
-def expect_parser_raise(string, exception=ParseError, msg=None):
+def expect_parser_raise(string, exception=ParseError, *, msg=None):
     with pytest.raises(exception) as exec_info:
         ast_from_string(string)
     if msg is not None:

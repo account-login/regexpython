@@ -8,7 +8,7 @@ from regex.parser import BaseNode, Char, CharRange, NotChars, Dot, Star, Cat, Or
 
 
 class NfaState:
-    def __init__(self, char=None, not_chars=None, to=None, other=None, epsilon=None):
+    def __init__(self, *, char=None, not_chars=None, to=None, other=None, epsilon=None):
         # combinations:
         # char, to
         # not_chars, other
