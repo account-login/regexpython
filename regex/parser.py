@@ -59,9 +59,11 @@ class Token(AutoNumber):
     LBRACKET = ()
     RBRACKET = ()
     DASH = ()
+    NOT = ()
 
     STAR = ()
-    NOT = ()
+    PLUS = ()
+    QUESTION = ()
 
     DOT = ()
 
@@ -84,6 +86,8 @@ def tokenize(chars: BufferedGen):
         # '[': Token.LBRACKET,
         # ']': Token.RBRACKET,
         '*': Token.STAR,
+        '+': Token.PLUS,
+        '?': Token.QUESTION,
         '.': Token.DOT,
         '^': Token.BEGIN,
         '$': Token.END,
@@ -225,12 +229,17 @@ def parse_cat(tokens: TokenGen):
             cats.append(parse_par(tokens))
         elif ch is Token.LBRACKET:
             cats.append(parser_bracket(tokens))
-        elif ch is Token.STAR:
+        elif ch in (Token.STAR, Token.PLUS, Token.QUESTION):
             if not cats:
                 raise ParseError('nothing to repeat')
-            if isinstance(cats[-1], Star):
-                raise ParseError('mutiple repeat')
-            cats[-1] = Star(cats[-1])
+            if isinstance(cats[-1], (Star, Plus, Question)):
+                raise ParseError('multiple repeat')
+            tok2node = {
+                Token.STAR: Star,
+                Token.PLUS: Plus,
+                Token.QUESTION: Question,
+            }
+            cats[-1] = tok2node[ch](cats[-1])
             tokens.eat(ch)
         elif ch is Token.DOT:
             cats.append(Dot())
@@ -360,6 +369,14 @@ class Dot(BaseNode):
 
 
 class Star(BaseNode):
+    pass
+
+
+class Plus(BaseNode):
+    pass
+
+
+class Question(BaseNode):
     pass
 
 

@@ -14,11 +14,11 @@ def test_tokenizer_basic():
     tokens = token_list_from_string('')
     assert tokens == [Token.EOF]
 
-    tokens = token_list_from_string('^ab(|)[a][^c]*$')
+    tokens = token_list_from_string('^ab(|)[a][^c]*a+a?$')
     assert tokens == [
         Token.BEGIN, 'a', 'b', Token.LPAR, Token.OR, Token.RPAR,
         Token.LBRACKET, 'a', Token.RBRACKET, Token.LBRACKET, Token.NOT, 'c', Token.RBRACKET,
-        Token.STAR, Token.END, Token.EOF,
+        Token.STAR, 'a', Token.PLUS, 'a', Token.QUESTION, Token.END, Token.EOF,
     ]
 
 
@@ -81,6 +81,15 @@ def test_paser_basic():
     )
 
 
+def test_parser_repeat():
+    ast = ast_from_string('a*a+a?')
+    assert ast == Cat(
+        Star(Char('a')),
+        Plus(Char('a')),
+        Question(Char('a')),
+    )
+
+
 def test_parser_empty():
     ast = ast_from_string('')
     assert ast == Empty()
@@ -88,6 +97,14 @@ def test_parser_empty():
 
 def test_parser_unexpected_repeat():
     expect_parser_raise('*', ParseError, msg='nothing to repeat')
+    expect_parser_raise('+', ParseError, msg='nothing to repeat')
+    expect_parser_raise('?', ParseError, msg='nothing to repeat')
+
+
+def test_perser_multiple_repeat():
+    for r1 in '*+?':
+        for r2 in '*+':
+            expect_parser_raise('.' + r1 + r2, ParseError, msg='multiple repeat')
 
 
 def test_parser_bracket_basic():
