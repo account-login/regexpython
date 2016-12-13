@@ -1,7 +1,10 @@
 from collections import namedtuple
 from itertools import chain
 
-from regex.parser import BaseNode, Char, CharRange, NotChars, Dot, Star, Cat, Or, Empty, Token
+from regex.parser import (
+    BaseNode, Char, CharRange, NotChars, Dot,
+    Star, Plus, Question, Cat, Or, Empty, Token,
+)
 
 
 # TODO: handle range more effectly
@@ -88,6 +91,16 @@ def ast_to_nfa(node: BaseNode) -> NfaPair:
         sub_start, sub_end = ast_to_nfa(node.children[0])
         sub_start.epsilon.add(sub_end)
         sub_end.epsilon.add(sub_start)
+
+        return NfaPair(sub_start, sub_end)
+    elif isinstance(node, Plus):
+        sub_start, sub_end = ast_to_nfa(node.children[0])
+        sub_end.epsilon.add(sub_start)
+
+        return NfaPair(sub_start, sub_end)
+    elif isinstance(node, Question):
+        sub_start, sub_end = ast_to_nfa(node.children[0])
+        sub_start.epsilon.add(sub_end)
 
         return NfaPair(sub_start, sub_end)
     elif isinstance(node, Cat):

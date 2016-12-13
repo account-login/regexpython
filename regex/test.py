@@ -205,6 +205,19 @@ def test_match_begin_star():
     MT('a*b', 'aaaa', -1)
 
 
+def test_match_begin_plus():
+    MT('a+', 'a', 1)
+    MT('a+', 'aa', 2)
+    MT('a+', '', -1)
+    MT('a+', 'ab', 1)
+
+
+def test_match_begin_question():
+    MT('a?', 'a', 1)
+    MT('a?', '', 0)
+    MT('a?', 'aa', 1)
+
+
 def test_match_begin_dot():
     MT('.a.*', 'basdf', 5)
     MT('.|[^a]|.|[^a]|.', 'aa', 1)

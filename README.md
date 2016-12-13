@@ -9,6 +9,8 @@ Regular expression engine in Python.
 - dot `.`
 - begin/end of string `^`, `$`
 - star `x*`
+- plus `x+`
+- question mark `x?`
 - bracket
     * enumeration `[abc]`
     * complement set `[^abc]`
@@ -24,7 +26,6 @@ TBA
 ## Feature not implemented
 
 - grouping by `(...)`
-- plus & question mark `x+`, `x?`
 - non-greedy qualifier `*?`, `+?`, `??`, `x{a,b}?`
 - repeat `x{a}`, `x{a,}`, `x{a,b}`
 - zero length assertions
