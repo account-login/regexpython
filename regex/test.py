@@ -10,11 +10,21 @@ def token_list_from_string(string):
     return list(tokenize(BufferedGen(iter(string))))
 
 
+def simplified_tokens(string):
+    def transform(tok):
+        if tok.type is Token.CHAR:
+            return tok.value
+        else:
+            return tok.type
+
+    return [ transform(x) for x in token_list_from_string(string) ]
+
+
 def test_tokenizer_basic():
-    tokens = token_list_from_string('')
+    tokens = simplified_tokens('')
     assert tokens == [Token.EOF]
 
-    tokens = token_list_from_string('^ab(|)[a][^c]*a+a?$')
+    tokens = simplified_tokens('^ab(|)[a][^c]*a+a?$')
     assert tokens == [
         Token.BEGIN, 'a', 'b', Token.LPAR, Token.OR, Token.RPAR,
         Token.LBRACKET, 'a', Token.RBRACKET, Token.LBRACKET, Token.NOT, 'c', Token.RBRACKET,
@@ -23,51 +33,51 @@ def test_tokenizer_basic():
 
 
 def test_tokenizer_right_bracket():
-    assert token_list_from_string(']') == [']', Token.EOF]
+    assert simplified_tokens(']') == [']', Token.EOF]
 
 
 def test_tokenizer_bracket_no_special():
-    tokens = token_list_from_string('[^[|*+?^()]')
+    tokens = simplified_tokens('[^[|*+?^()]')
     assert tokens == [Token.LBRACKET, Token.NOT] + list('[|*+?^()') + [Token.RBRACKET, Token.EOF]
 
 
 def test_tokenizer_bracket_non_empty():
-    tokens = token_list_from_string('[]')
+    tokens = simplified_tokens('[]')
     assert tokens == [Token.LBRACKET, ']', Token.EOF]
 
-    tokens = token_list_from_string('[^]')
+    tokens = simplified_tokens('[^]')
     assert tokens == [Token.LBRACKET, Token.NOT, ']', Token.EOF]
 
-    tokens = token_list_from_string('[]]')
+    tokens = simplified_tokens('[]]')
     assert tokens == [Token.LBRACKET, ']', Token.RBRACKET, Token.EOF]
 
 
 def test_tokenizer_bracket_range():
-    tokens = token_list_from_string('[a-c]')
+    tokens = simplified_tokens('[a-c]')
     assert tokens == [Token.LBRACKET, 'a', Token.DASH, 'c', Token.RBRACKET, Token.EOF]
 
-    tokens = token_list_from_string('[a-c-d]')
+    tokens = simplified_tokens('[a-c-d]')
     assert tokens == [Token.LBRACKET, 'a', Token.DASH, 'c', Token.DASH, 'd', Token.RBRACKET, Token.EOF]
 
-    tokens = token_list_from_string('[a-]')
+    tokens = simplified_tokens('[a-]')
     assert tokens == [Token.LBRACKET, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
-    tokens = token_list_from_string('[-a-]')
+    tokens = simplified_tokens('[-a-]')
     assert tokens == [Token.LBRACKET, Token.DASH, 'a', Token.DASH, Token.RBRACKET, Token.EOF]
 
 
 def test_tokenizer_escape_constant():
-    tokens = token_list_from_string('\\a\\f\\n\\r\\t\\v\\\\')
+    tokens = simplified_tokens('\\a\\f\\n\\r\\t\\v\\\\')
     assert tokens == list('\a\f\n\r\t\v\\') + [Token.EOF]
 
 
 def test_tokenizer_escape_unicode():
-    tokens = token_list_from_string('\\x11\\u1234\\U00004321')
+    tokens = simplified_tokens('\\x11\\u1234\\U00004321')
     assert tokens == list('\x11\u1234\U00004321') + [Token.EOF]
 
 
 def test_tokenizer_escape_AZ():
-    tokens = token_list_from_string('\\A\\Z')
+    tokens = simplified_tokens('\\A\\Z')
     assert tokens == [Token.BEGIN, Token.END, Token.EOF]
 
 
@@ -82,7 +92,7 @@ def test_paser_basic():
     ast = ast_from_string('^ab(a||b|)*|c$')
     assert ast == Or(
         Cat(
-            Char(Token.BEGIN),
+            Char(Token.BEGIN()),
             Char('a'),
             Char('b'),
             Star(
@@ -91,7 +101,7 @@ def test_paser_basic():
         ),
         Cat(
             Char('c'),
-            Char(Token.END),
+            Char(Token.END()),
         ),
     )
 

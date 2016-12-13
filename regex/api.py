@@ -37,7 +37,7 @@ class Regex:
 
         assert dfa is not None
         if not dfa.is_end():
-            dfa = dfa.follow(Token.END)
+            dfa = dfa.follow(Token.END())
             if dfa is not None and dfa.is_end():
                 last_match = i
 

@@ -1,4 +1,3 @@
-from regex.utils import AutoNumber
 
 
 class BufferedGen:
@@ -26,54 +25,82 @@ class TokenGen(BufferedGen):
         super().__init__(gen)
         self.eof = False
 
-    def get(self):
+    def get(self) -> 'Token':
         if not self.eof:
             try:
                 ret = super().get()
             except StopIteration:
                 self.eof = True
             else:
-                if ret is Token.EOF:
+                if ret.type is Token.EOF:
                     self.eof = True
 
         if self.eof:
-            return Token.EOF
+            return Token.EOF()
         else:
             return ret
 
-    def eat(self, expect=None):
-        assert expect is not Token.EOF
+    def eat(self, expect: 'Token'=None):
+        assert expect.type is not Token.EOF
         tok = self.get()
-        if tok is Token.EOF:
+        if tok.type is Token.EOF:
             raise UnexpectedEOF(expect=expect)
         if expect is not None and tok != expect:
             raise UnexpectedToken(got=tok, expect=expect)
 
 
-class Token(AutoNumber):
-    OR = ()
+class TokenMeta(type):
+    def __new__(metacls, name, bases, namespaces):
+        sub_types = set()
+        for attr, value in namespaces.items():
+            if value == ():
+                sub_types.add(attr)
+        for attr in sub_types:
+            del namespaces[attr]
 
-    LPAR = ()
-    RPAR = ()
+        klass = super().__new__(metacls, name, bases, namespaces)
+        for attr in sub_types:
+            sub_cls = super().__new__(metacls, attr, (klass,), namespaces)
+            setattr(klass, attr, sub_cls)
 
-    LBRACKET = ()
-    RBRACKET = ()
-    DASH = ()
-    NOT = ()
-
-    STAR = ()
-    PLUS = ()
-    QUESTION = ()
-
-    DOT = ()
-
-    BEGIN = ()
-    END = ()
-
-    EOF = ()
+        return klass
 
 
-def read_escape(chars: BufferedGen, in_bracket: bool):
+class Token(metaclass=TokenMeta):
+    OR = ()         # type: TokenMeta
+
+    LPAR = ()       # type: TokenMeta
+    RPAR = ()       # type: TokenMeta
+
+    LBRACKET = ()   # type: TokenMeta
+    RBRACKET = ()   # type: TokenMeta
+    DASH = ()       # type: TokenMeta
+    NOT = ()        # type: TokenMeta
+
+    STAR = ()       # type: TokenMeta
+    PLUS = ()       # type: TokenMeta
+    QUESTION = ()   # type: TokenMeta
+
+    DOT = ()        # type: TokenMeta
+    CHAR = ()       # type: TokenMeta
+
+    BEGIN = ()      # type: TokenMeta
+    END = ()        # type: TokenMeta
+
+    EOF = ()        # type: TokenMeta
+
+    def __init__(self, value=None):
+        self.value = value
+        self.type = self.__class__
+
+    def __eq__(self, other):
+        return self.type, self.value == other.type, other.value
+
+    def __hash__(self):
+        return hash((self.type, self.value))
+
+
+def read_escape(chars: BufferedGen, in_bracket: bool) -> Token:
     ascii_escpes = {
         'a': '\a',
         # 'b': '\b',
@@ -96,38 +123,38 @@ def read_escape(chars: BufferedGen, in_bracket: bool):
 
     if ch == 'b':
         if in_bracket:
-            return '\b'
+            return Token.CHAR('\b')
         else:
             raise NotImplementedError
     if ch in ascii_escpes:
-        return ascii_escpes[ch]
+        return Token.CHAR(ascii_escpes[ch])
     elif ch == 'A':
-        return Token.BEGIN
+        return Token.BEGIN()
     elif ch == 'Z':
-        return Token.END
+        return Token.END()
     elif ch in 'xuU':
         digits_num = {'x': 2, 'u': 4, 'U': 8}[ch]
         digits = [ chars.get().lower() for _ in range(digits_num) ]
         if not check_hex_digits(digits):
             raise IllegalEscape('\\' + ch + ''.join(digits))
-        return chr(int(''.join(digits), base=16))
+        return Token.CHAR(chr(int(''.join(digits), base=16)))
     else:
         raise NotImplementedError
 
 
 def tokenize(chars: BufferedGen):
     direct_yield = {
-        '|': Token.OR,
-        '(': Token.LPAR,
-        ')': Token.RPAR,
-        # '[': Token.LBRACKET,
-        # ']': Token.RBRACKET,
-        '*': Token.STAR,
-        '+': Token.PLUS,
-        '?': Token.QUESTION,
-        '.': Token.DOT,
-        '^': Token.BEGIN,
-        '$': Token.END,
+        '|': Token.OR(),
+        '(': Token.LPAR(),
+        ')': Token.RPAR(),
+        # '[': Token.LBRACKET(),
+        # ']': Token.RBRACKET(),
+        '*': Token.STAR(),
+        '+': Token.PLUS(),
+        '?': Token.QUESTION(),
+        '.': Token.DOT(),
+        '^': Token.BEGIN(),
+        '$': Token.END(),
     }
 
     in_bracket = False
@@ -136,7 +163,7 @@ def tokenize(chars: BufferedGen):
         try:
             ch = chars.get()
         except StopIteration:
-            yield Token.EOF
+            yield Token.EOF()
             raise
 
         if in_bracket:
@@ -146,34 +173,34 @@ def tokenize(chars: BufferedGen):
                 except StopIteration:
                     raise IllegalEscape
             elif ch == ']':
-                if prev in (Token.LBRACKET, Token.NOT):
+                if prev.type in (Token.LBRACKET, Token.NOT):
                     # empty bracket not allowed, left bracket must follow a regular char.
-                    tok = ch
+                    tok = Token.CHAR(ch)
                 else:
                     in_bracket = False
-                    tok = Token.RBRACKET
+                    tok = Token.RBRACKET()
             elif ch == '^':
-                if prev == Token.LBRACKET:
-                    tok = Token.NOT
+                if prev.type == Token.LBRACKET:
+                    tok = Token.NOT()
                 else:
-                    tok = ch
+                    tok = Token.CHAR(ch)
             elif ch == '-':
-                tok = Token.DASH
+                tok = Token.DASH()
             else:
-                tok = ch
+                tok = Token.CHAR(ch)
         else:
             if ch in direct_yield:
                 tok = direct_yield[ch]
             elif ch == '[':
                 in_bracket = True
-                tok = Token.LBRACKET
+                tok = Token.LBRACKET()
             elif ch == '\\':
                 try:
                     tok = read_escape(chars, in_bracket)
                 except StopIteration:
                     raise IllegalEscape
             else:
-                tok = ch
+                tok = Token.CHAR(ch)
 
         prev = tok
         yield tok
@@ -215,31 +242,30 @@ class UnexpectedToken(ParseError):
 class UnexpectedEOF(UnexpectedToken):
     def __init__(self, *, got=None, expect=None, msg=None):
         if got is not None:
-            assert got is Token.EOF
+            assert got.type is Token.EOF
         else:
-            got = Token.EOF
+            got = Token.EOF()
         super().__init__(got=got, expect=expect, msg=msg)
 
 
 def parse_par(tokens: TokenGen):
-    tokens.eat(Token.LPAR)
+    tokens.eat(Token.LPAR())
     ret = parse_exp(tokens)
-    tokens.eat(Token.RPAR)
+    tokens.eat(Token.RPAR())
     return ret
 
 
 def parser_bracket(tokens: TokenGen):
-    tokens.eat(Token.LBRACKET)
-    complement = tokens.peek() is Token.NOT
+    tokens.eat(Token.LBRACKET())
+    complement = tokens.peek().type is Token.NOT
     if complement:
-        tokens.eat(Token.NOT)
+        tokens.eat(Token.NOT())
 
     ors = []
     while True:
         tok = tokens.get()
-        if tok is Token.RBRACKET:
-            if len(ors) == 0:
-                assert False, 'impossible'
+        if tok.type is Token.RBRACKET:
+            assert len(ors) != 0
 
             if complement:
                 return NotChars(*ors)
@@ -248,26 +274,26 @@ def parser_bracket(tokens: TokenGen):
                     return ors[0]
                 else:
                     return Or(*ors)
-        elif tok is Token.EOF:
+        elif tok.type is Token.EOF:
             raise UnexpectedEOF()
-        elif tok is Token.DASH:
+        elif tok.type is Token.DASH:
             if len(ors) == 0:
                 ors.append(Char('-'))
             else:
                 next_tok = tokens.peek()
-                if next_tok is Token.RBRACKET:
+                if next_tok.type is Token.RBRACKET:
                     ors.append(Char('-'))
-                elif next_tok is Token.EOF:
-                    raise UnexpectedEOF(expect=Token.RBRACKET)
+                elif next_tok.type is Token.EOF:
+                    raise UnexpectedEOF(expect=Token.RBRACKET())
                 else:
                     if isinstance(ors[-1], Char):
-                        ors[-1] = CharRange(start=ors[-1].children[0], end=tokens.get())
+                        ors[-1] = CharRange(start=ors[-1].children[0], end=tokens.get().value)
                     else:
                         # TODO: possible bad range error
                         ors.append(Char('-'))
-        elif isinstance(tok, str):
-            assert len(tok) == 1
-            ors.append(Char(tok))
+        elif tok.type is tok.CHAR:
+            assert len(tok.value) == 1
+            ors.append(Char(tok.value))
         else:
             raise NotImplementedError
 
@@ -275,16 +301,16 @@ def parser_bracket(tokens: TokenGen):
 def parse_cat(tokens: TokenGen):
     cats = []
     while True:
-        ch = tokens.peek()
-        if ch is Token.EOF:
+        tok = tokens.peek()
+        if tok.type is Token.EOF:
             break
-        elif ch in (Token.OR, Token.RPAR):
+        elif tok.type in (Token.OR, Token.RPAR):
             break
-        elif ch is Token.LPAR:
+        elif tok.type is Token.LPAR:
             cats.append(parse_par(tokens))
-        elif ch is Token.LBRACKET:
+        elif tok.type is Token.LBRACKET:
             cats.append(parser_bracket(tokens))
-        elif ch in (Token.STAR, Token.PLUS, Token.QUESTION):
+        elif tok.type in (Token.STAR, Token.PLUS, Token.QUESTION):
             if not cats:
                 raise ParseError('nothing to repeat')
             if isinstance(cats[-1], (Star, Plus, Question)):
@@ -294,21 +320,21 @@ def parse_cat(tokens: TokenGen):
                 Token.PLUS: Plus,
                 Token.QUESTION: Question,
             }
-            cats[-1] = tok2node[ch](cats[-1])
-            tokens.eat(ch)
-        elif ch is Token.DOT:
+            cats[-1] = tok2node[tok.type](cats[-1])
+            tokens.eat(tok)
+        elif tok.type is Token.DOT:
             cats.append(Dot())
-            tokens.eat(ch)
-        elif ch in (Token.BEGIN, Token.END):
-            cats.append(Char(ch))
-            tokens.eat(ch)
-        elif isinstance(ch, Token):
-            assert ch in (Token.RBRACKET, Token.NOT)
-            assert False, 'impossible'
+            tokens.eat(tok)
+        elif tok.type in (Token.BEGIN, Token.END):
+            cats.append(Char(tok))
+            tokens.eat(tok)
+        elif tok.type is Token.CHAR:
+            assert isinstance(tok.value, str) and len(tok.value) == 1
+            cats.append(Char(tok.value))
+            tokens.eat(tok)
         else:
-            assert isinstance(ch, str) and len(ch) == 1
-            cats.append(Char(ch))
-            tokens.eat(ch)
+            assert tok.type in (Token.RBRACKET, Token.NOT)
+            assert False, 'impossible'
 
     if len(cats) == 0:
         return Empty()
@@ -324,12 +350,12 @@ def parse_exp(tokens: TokenGen):
     while True:
         cat = parse_cat(tokens)
         ors.append(cat)
-        ch = tokens.peek()
-        if ch is Token.EOF:
+        tok = tokens.peek()
+        if tok.type is Token.EOF:
             break
-        elif ch is Token.OR:
-            tokens.eat(Token.OR)
-        elif ch is Token.RPAR:
+        elif tok.type is Token.OR:
+            tokens.eat(Token.OR())
+        elif tok.type is Token.RPAR:
             break
         else:
             assert False, 'impossible'
@@ -344,10 +370,8 @@ def parse_exp(tokens: TokenGen):
 def parse(tokens: TokenGen):
     exp = parse_exp(tokens)
     tok = tokens.peek()
-    if tok is not Token.EOF:
-        assert False, 'impossible'
-    else:
-        return exp
+    assert tok.type is Token.EOF
+    return exp
 
 
 def ast_from_string(string):

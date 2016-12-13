@@ -134,7 +134,7 @@ def ast_to_nfa(node: BaseNode) -> NfaPair:
 class CharToSet:
     def __init__(self):
         self.chars = dict()
-        self.not_accept = set() # type: set
+        self.not_accept = set()     # type: set
         self.other = set()
 
     def get(self, char):
@@ -193,7 +193,7 @@ class CharToSet:
 
     def freeze(self):
         for ch, sset in self.chars.items():
-            extra = {Token.END}.intersection({ch})
+            extra = {Token.END()}.intersection({ch})
             self.chars[ch] = frozenset(ε_closure(sset, extra=extra))
         self.not_accept = frozenset(self.not_accept)
         self.other = frozenset(ε_closure(self.other))
@@ -226,7 +226,7 @@ class DfaState:
         set_to_state = dict()
         start_dfa = None
 
-        q = [ ε_closure({start}, extra={Token.BEGIN}) ]
+        q = [ ε_closure({start}, extra={Token.BEGIN()}) ]
         while q:
             dfa_state = cls(set_to_state, end)
             dfa_state.states = q.pop()
@@ -253,7 +253,7 @@ class DfaState:
                 # special case for matching empty string
                 # both Token.BEGIN and Token.END should be considered epsilon
                 start_dfa.match_empty = end in ε_closure(
-                    start_dfa.states, extra={Token.BEGIN, Token.END})
+                    start_dfa.states, extra={Token.BEGIN(), Token.END()})
 
         assert start_dfa.match_empty is not None
         return start_dfa
