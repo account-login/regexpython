@@ -36,7 +36,7 @@ class Token(metaclass=TokenMeta):
 
     DOT = ()        # type: TokenMeta
     CHAR = ()       # type: TokenMeta
-    ESCAPE = ()    # type: TokenMeta
+    ESCAPE = ()     # type: TokenMeta
 
     BEGIN = ()      # type: TokenMeta
     END = ()        # type: TokenMeta
