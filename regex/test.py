@@ -372,13 +372,10 @@ def test_ast_to_svg():
 
 
 def test_nfa_to_svg():
-    ast = ast_from_string('ab(a||b|[^a-c]|)*|c')
-    nfa_pair = ast_to_nfa(ast)
-    assert nfa_pair._repr_svg_().startswith('<?xml')
-
-    ast = ast_from_string('')
-    nfa_pair = ast_to_nfa(ast)
-    assert nfa_pair._repr_svg_().startswith('<?xml')
+    for string in ('ab(a||b|[^a-c]|)*|c', ''):
+        ast = ast_from_string(string)
+        nfa_pair = ast_to_nfa(ast)
+        assert nfa_pair._repr_svg_().startswith('<?xml')
 
 
 def test_dfa_to_svg():
