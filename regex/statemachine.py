@@ -67,6 +67,7 @@ def merge_bracket_ranges(node: Bracket) -> RangeSet:
         elif isinstance(child, CharRange):
             rs.add_range(child.start, child.end)
         elif isinstance(child, Bracket):
+            # TODO: RangeSet.update()
             subrs = merge_bracket_ranges(child)
             for r in subrs.get_true_ranges():
                 rs.add_range(r.start, r.end)
@@ -88,10 +89,12 @@ def ast_to_nfa(node: BaseNode) -> NfaPair:
         rs = merge_bracket_ranges(node)
         end = NfaState()
         start = NfaState(charset=rs, to=end)
+
         return NfaPair(start, end)
     elif isinstance(node, Dot):
         end = NfaState()
         start = NfaState(charset=RangeSet.all(), to=end)
+
         return NfaPair(start, end)
     elif isinstance(node, Star):
         sub_start, sub_end = ast_to_nfa(node.children[0])

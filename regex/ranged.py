@@ -11,10 +11,10 @@ MAX_CHAR = '\U0010ffff'
 
 @total_ordering
 class RangeMapItem:
-    def __init__(self, start: str, end: str, value: set):
+    def __init__(self, start: str, end: str, value):
         self.start = start
         self.end = end
-        self.value = value
+        self.value = set(value)
 
     def __eq__(self, other):
         return self.end == other.end
@@ -124,11 +124,7 @@ class RangeSet(RangeMap):
     FALSE = frozenset()
 
     def __str__(self):
-        segs = []
-        for r in self.get_true_ranges():
-            segs.append(repr_range(r.start, r.end))
-
-        return ','.join(segs)
+        return ','.join(repr_range(r.start, r.end) for r in self.get_true_ranges())
 
     def add_range(self, start: str, end: str, value=None):
         super().add_range(start, end, self.TRUE)
@@ -143,20 +139,11 @@ class RangeSet(RangeMap):
         self.add_range(char, char)
 
     def complement(self):
-        for data in self.get_ranges():
+        for data in self.get_ranges():  # type: RangeMapItem
             if data.value == self.TRUE:
-                data.value = self.FALSE
+                data.value = set(self.FALSE)
             else:
-                data.value = self.TRUE
-
-    @classmethod
-    def from_complemented_chars(cls, not_chars):
-        rs = cls()
-        for nc in not_chars:
-            rs.add_char(nc)
-        rs.complement()
-
-        return rs
+                data.value = set(self.TRUE)
 
     @classmethod
     def all(cls):

@@ -211,6 +211,9 @@ def test_rangeset_complement():
             ans.update(chr(cp) for cp in range(ord(r.start), ord(r.end) + 1))
         return ans
 
+    assert expand([RangeMapItem('a', 'e', set()), RangeMapItem('0', '9', set())]) \
+        == set('abcde0123456789')
+
     def run(chars):
         rs = RangeSet()
         for ch in chars:
