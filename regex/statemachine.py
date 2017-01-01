@@ -149,6 +149,8 @@ class DfaState:
         self.set_to_state = set_to_state
         self.end = end
         self.states = set()
+        self.is_end = None
+        self.is_dollar_end = None
         self.match_empty = None
 
     def __repr__(self):
@@ -189,6 +191,9 @@ class DfaState:
                 if nfas and nfas not in set_to_state:
                     q.append(nfas)
 
+            dfa_state.is_end = end in dfa_state.states
+            dfa_state.is_dollar_end = end in ε_closure(dfa_state.states, extra={Token.END()})
+
             if start_dfa is None:
                 start_dfa = dfa_state
                 # special case for matching empty string
@@ -205,13 +210,6 @@ class DfaState:
             return self.set_to_state[nfas]
         else:
             return None
-
-    def is_end(self):
-        # TODO: cache this
-        return self.end in self.states
-
-    def is_dollar_end(self):
-        return self.end in ε_closure(self.states, extra={Token.END()})
 
     def freeze(self):
         for r in self.rangemap.get_ranges():

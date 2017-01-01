@@ -19,7 +19,7 @@ class Regex:
                 return -1
 
         dfa = self.dfa
-        if dfa.is_end():
+        if dfa.is_end:
             # can match zero length prefix, return 0
             last_match = -1
         else:
@@ -32,12 +32,12 @@ class Regex:
             if dfa is None:
                 return last_match + 1
             else:
-                if dfa.is_end():
+                if dfa.is_end:
                     last_match = i
 
         assert dfa is not None
-        if not dfa.is_end():
-            if dfa.is_dollar_end():
+        if not dfa.is_end:
+            if dfa.is_dollar_end:
                 last_match = i
 
         return last_match + 1

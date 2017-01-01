@@ -122,7 +122,7 @@ def dfa_to_gv(dfa_start: DfaState):
         name = ''.join(labels)
         if dfa is dfa_start:
             node_opts = dict(color='black', fontcolor='white')
-        elif dfa.is_end():
+        elif dfa.is_end:
             node_opts = dict(color='green', fontcolor='white')
         else:
             node_opts = dict()
