@@ -1,6 +1,6 @@
 from regex.errors import ParseError, BadRange, UnexpectedToken, UnexpectedEOF
 from regex.tokenizer import Token, tokenize
-from regex.utils import BufferedGen
+from regex.utils import BufferedGen, repr_range
 
 
 class TokenGen(BufferedGen):
@@ -46,14 +46,7 @@ def parser_bracket(tokens: TokenGen):
         tok = tokens.get()
         if tok.type is Token.RBRACKET:
             assert len(ors) != 0
-
-            if complement:
-                return NotChars(*ors)
-            else:
-                if len(ors) == 1:
-                    return ors[0]
-                else:
-                    return Or(*ors)
+            return Bracket(*ors, complement=complement)
         elif tok.type is Token.EOF:
             raise UnexpectedEOF()
         elif tok.type is Token.DASH:
@@ -122,12 +115,11 @@ def parse_cat(tokens: TokenGen):
             tokens.eat(tok)
         else:
             assert tok.type in (Token.RBRACKET, Token.NOT)
-            assert False, 'impossible'
+            assert not 'possible'
 
     if len(cats) == 0:
         return Empty()
     elif len(cats) == 1:
-        # unnecessary optimization
         return cats[0]
     else:
         return Cat(*cats)
@@ -146,7 +138,7 @@ def parse_exp(tokens: TokenGen):
         elif tok.type is Token.RPAR:
             break
         else:
-            assert False, 'impossible'
+            assert not 'possible'
 
     assert len(ors) != 0
     if len(ors) == 1:
@@ -205,7 +197,10 @@ class Char(BaseNode):
     def _node_label(self):
         assert len(self.children) == 1
         assert isinstance(self.children[0], (str, Token))
-        return str(self.children[0])
+        if isinstance(self.children[0], str):
+            return repr_range(self.children[0], self.children[0])
+        else:
+            return str(self.children[0])
 
 
 class CharRange(BaseNode):
@@ -221,13 +216,20 @@ class CharRange(BaseNode):
     def __eq__(self, other):
         return self.start, self.end == other.start, other.end
 
-    def __iter__(self):
-        for codepoint in range(ord(self.start), ord(self.end) + 1):
-            yield Char(chr(codepoint))
+    def _node_label(self):
+        return '{cls}: {range}'.format(
+            cls=self.__class__.__name__,
+            range=repr_range(self.start, self.end),
+        )
 
 
-class NotChars(BaseNode):
-    pass
+class Bracket(BaseNode):
+    def __init__(self, *children, complement: bool):
+        super().__init__(*children)
+        self.complement = complement
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.complement is other.complement
 
 
 class Dot(BaseNode):
@@ -262,7 +264,7 @@ def lookup_escape(tok: Token) -> BaseNode:
     elif tok.value in 'bB':
         raise NotImplementedError
     else:
-        assert False, 'impossible'
+        assert not 'possible'
 
 
 # TODO: unicode mode

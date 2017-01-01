@@ -2,25 +2,21 @@ from collections import namedtuple
 from itertools import chain
 
 from regex.parser import (
-    BaseNode, Char, CharRange, NotChars, Dot,
+    BaseNode, Char, Bracket, CharRange, Dot,
     Star, Plus, Question, Cat, Or, Empty,
 )
 from regex.tokenizer import Token
-
-
-# TODO: handle range more effectly
+from regex.ranged import RangeSet, RangeMap
 
 
 class NfaState:
-    def __init__(self, *, char=None, not_chars=None, to=None, other=None, epsilon=None):
+    def __init__(self, *, char=None, charset: RangeSet=None, to=None, epsilon=None):
         # combinations:
         # char, to
-        # not_chars, other
-        # other
+        # charset, to
         self.char = char
-        self.not_chars = not_chars
+        self.charset = charset
         self.to = to
-        self.other = other
         self.epsilon = epsilon or set()
         self.label = 'S_{:x}'.format(id(self))
 
@@ -63,30 +59,39 @@ def ε_closure(nfas, extra=None):
             return ans
 
 
+def merge_bracket_ranges(node: Bracket) -> RangeSet:
+    rs = RangeSet()
+    for child in node.children:
+        if isinstance(child, Char):
+            rs.add_char(child.children[0])
+        elif isinstance(child, CharRange):
+            rs.add_range(child.start, child.end)
+        elif isinstance(child, Bracket):
+            subrs = merge_bracket_ranges(child)
+            for r in subrs.get_true_ranges():
+                rs.add_range(r.start, r.end)
+        else:
+            assert not 'possible'
+
+    if node.complement:
+        rs.complement()
+    return rs
+
+
 def ast_to_nfa(node: BaseNode) -> NfaPair:
     if isinstance(node, Char):
         end = NfaState()
         start = NfaState(char=node.children[0], to=end)
         return NfaPair(start, end)
-    elif isinstance(node, CharRange):
-        return ast_to_nfa(Or(*node))
-    elif isinstance(node, NotChars):
-        children_expanded = set()
-        for child in node.children:
-            if isinstance(child, Char):
-                children_expanded.add(child.children[0])
-            elif isinstance(child, CharRange):
-                for char in child:
-                    children_expanded.add(char.children[0])
-            else:
-                assert False, 'impossible'
-
+    elif isinstance(node, Bracket):
+        # merge ranges
+        rs = merge_bracket_ranges(node)
         end = NfaState()
-        start = NfaState(not_chars=children_expanded, other=end)
+        start = NfaState(charset=rs, to=end)
         return NfaPair(start, end)
     elif isinstance(node, Dot):
         end = NfaState()
-        start = NfaState(other=end)
+        start = NfaState(charset=RangeSet.all(), to=end)
         return NfaPair(start, end)
     elif isinstance(node, Star):
         sub_start, sub_end = ast_to_nfa(node.children[0])
@@ -132,80 +137,12 @@ def ast_to_nfa(node: BaseNode) -> NfaPair:
         raise NotImplementedError
 
 
-class CharToSet:
-    def __init__(self):
-        self.chars = dict()
-        self.not_accept = set()     # type: set
-        self.other = set()
-
-    def get(self, char):
-        if char in self.chars:
-            return self.chars[char]
-        elif char in self.not_accept:
-            return None
-        else:
-            return self.other
-
-    def add_char(self, char, dest):
-        if char in self.not_accept:
-            assert char not in self.chars
-            self.not_accept.remove(char)
-            self.chars[char] = { dest }
-        elif char in self.chars:
-            assert char not in self.not_accept
-            self.chars[char].add(dest)
-        else:
-            self.chars[char] = self.other.union({ dest })
-
-    def add_not_chars(self, not_chars: set, other):
-        common_with_chars = not_chars.intersection(set(self.chars.keys()))
-        if self.other:
-            common_with_not_accept = not_chars.intersection(self.not_accept)
-        else:
-            assert not self.not_accept
-            common_with_not_accept = not_chars - common_with_chars
-
-        common_with_other = not_chars - common_with_not_accept - common_with_chars
-        for co in common_with_other:
-            assert co not in self.chars
-            self.chars[co] = set(self.other)
-
-        for ch, sset in self.chars.items():
-            if ch not in common_with_chars:
-                sset.add(other)
-
-        for na in self.not_accept - common_with_not_accept:
-            assert na not in self.chars
-            self.chars[na] = { other }
-
-        self.not_accept = common_with_not_accept
-        self.other.add(other)
-
-    def add_other(self, other):
-        self.other.add(other)
-
-        for sset in self.chars.values():
-            sset.add(other)
-
-        for ch in self.not_accept:
-            assert ch not in self.chars
-            self.chars[ch] = { other }
-        self.not_accept = set()
-
-    def freeze(self):
-        for ch, sset in self.chars.items():
-            extra = {Token.END()}.intersection({ch})
-            self.chars[ch] = frozenset(ε_closure(sset, extra=extra))
-        self.not_accept = frozenset(self.not_accept)
-        self.other = frozenset(ε_closure(self.other))
-
-
 class DfaState:
     def __init__(self, set_to_state, end):
         """
         :type set_to_state: dict[set[NfaState], DfaState]
         """
-        self.char_to_set = CharToSet()
+        self.rangemap = RangeMap()
         self.set_to_state = set_to_state
         self.end = end
         self.states = set()
@@ -234,20 +171,20 @@ class DfaState:
 
             for nfa in dfa_state.states:    # type: NfaState
                 if nfa.char is not None:
-                    dfa_state.char_to_set.add_char(nfa.char, nfa.to)
-                elif nfa.not_chars is not None:
-                    dfa_state.char_to_set.add_not_chars(nfa.not_chars, nfa.other)
-                elif nfa.other:
-                    dfa_state.char_to_set.add_other(nfa.other)
+                    # nfa.char may be Token.BEGIN or Token.END
+                    if isinstance(nfa.char, str):
+                        dfa_state.rangemap.add_range(nfa.char, nfa.char, {nfa.to})
+                elif nfa.charset is not None:
+                    for r in nfa.charset.get_true_ranges():
+                        dfa_state.rangemap.add_range(r.start, r.end, {nfa.to})
 
             dfa_state.freeze()  # convert set to frozenset in order to work with hashtable
             set_to_state[dfa_state.states] = dfa_state
 
-            for nfas in dfa_state.char_to_set.chars.values():
-                if nfas not in set_to_state:
+            for r in dfa_state.rangemap.get_ranges():
+                nfas = r.value
+                if nfas and nfas not in set_to_state:
                     q.append(nfas)
-            if dfa_state.char_to_set.other and dfa_state.char_to_set.other not in set_to_state:
-                q.append(dfa_state.char_to_set.other)
 
             if start_dfa is None:
                 start_dfa = dfa_state
@@ -260,15 +197,20 @@ class DfaState:
         return start_dfa
 
     def follow(self, char):
-        nfas = self.char_to_set.get(char)
+        nfas = self.rangemap.get_char(char)
         if nfas:
             return self.set_to_state[nfas]
         else:
             return None
 
     def is_end(self):
+        # TODO: cache this
         return self.end in self.states
 
+    def is_dollar_end(self):
+        return self.end in ε_closure(self.states, extra={Token.END()})
+
     def freeze(self):
-        self.char_to_set.freeze()
+        for r in self.rangemap.get_ranges():
+            r.value = frozenset(ε_closure(r.value))
         self.states = frozenset(self.states)

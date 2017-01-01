@@ -3,7 +3,7 @@ from graphviz import Digraph
 
 from regex.statemachine import NfaState, NfaPair, DfaState
 from regex.parser import BaseNode, Cat
-from regex.utils import make_serial
+from regex.utils import make_serial, repr_range
 
 
 def ast_to_gv(ast: BaseNode):
@@ -66,7 +66,7 @@ def nfa_labelize(nfa_pair: NfaPair):
             node.label = 'S{}'.format(serial())
 
         seen.add(node)
-        for child in chain(node.epsilon, (node.to, node.other)):
+        for child in chain(node.epsilon, (node.to,)):
             if child and child not in seen:
                 rec(child)
 
@@ -86,7 +86,6 @@ def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
     else:
         g.node(start.label, 'START', color='black', fontcolor='white')
         g.node(end.label, 'END', color='green', fontcolor='white')
-    has_fail_node = False
 
     seen = dict()
 
@@ -94,19 +93,14 @@ def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
         name = node.label
         seen[node] = name
 
-        if node.char is not None:
+        if node.to is not None:
             sub_name = seen.get(node.to) or rec(node.to)
-            g.edge(name, sub_name, str(node.char))
-        elif node.not_chars is not None:
-            nonlocal has_fail_node
-            if not has_fail_node:
-                g.node('FAIL', color='red', fontcolor='white')
-                has_fail_node = True
-            g.edge(name, 'FAIL', str(node.not_chars))
-
-        if node.other:
-            sub_name = seen.get(node.other) or rec(node.other)
-            g.edge(name, sub_name, 'other')
+            if node.char is not None:
+                g.edge(name, sub_name, repr_range(node.char, node.char))
+            elif node.charset is not None:
+                g.edge(name, sub_name, str(node.charset))
+            else:
+                assert not 'possible'
 
         for to in node.epsilon:
             sub_name = seen.get(to) or rec(to)
@@ -121,7 +115,6 @@ def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
 def dfa_to_gv(dfa_start: DfaState):
     g = Digraph()
     g.attr('node', style='filled', width='0', height='0', shape='box', fontname='Fira Code')
-    has_fail_node = False
 
     nfas2name = dict()
     for nfas, dfa in dfa_start.set_to_state.items():
@@ -139,16 +132,9 @@ def dfa_to_gv(dfa_start: DfaState):
 
     for dfa in dfa_start.set_to_state.values():
         name = nfas2name[dfa.states]
-        for ch, to in dfa.char_to_set.chars.items():
-            g.edge(name, nfas2name[to], str(ch))
-
-        for not_char in dfa.char_to_set.not_accept:
-            if not has_fail_node:
-                g.node('FAIL', color='red', fontcolor='white')
-                has_fail_node = True
-            g.edge(name, 'FAIL', not_char)
-
-        if dfa.char_to_set.other:
-            g.edge(name, nfas2name[dfa.char_to_set.other], 'other')
+        for r in dfa.rangemap.get_ranges():
+            if r.value:
+                label = repr_range(r.start, r.end)
+                g.edge(name, nfas2name[r.value], label)
 
     return g

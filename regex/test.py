@@ -4,6 +4,7 @@ from regex.api import *
 from regex.parser import *
 from regex.tokenizer import *
 from regex.statemachine import *
+from regex.ranged import MIN_CHAR, MAX_CHAR
 from regex.utils import *
 from regex.errors import *
 from regex.visualize import *
@@ -171,10 +172,11 @@ def test_perser_multiple_repeat():
 
 def test_parser_bracket_basic():
     ast = ast_from_string('[abc]')
-    assert ast == Or(
+    assert ast == Bracket(
         Char('a'),
         Char('b'),
         Char('c'),
+        complement=False,
     )
 
 
@@ -190,36 +192,40 @@ def test_parser_bracket_not_closed():
 
 def test_parser_bracket_range():
     ast = ast_from_string('[a-c]')
-    assert ast == CharRange(start='a', end='c')
+    assert ast == Bracket(CharRange(start='a', end='c'), complement=False)
 
     ast = ast_from_string('[a-c-d]')
-    assert ast == Or(
+    assert ast == Bracket(
         CharRange(start='a', end='c'),
         Char('-'),
         Char('d'),
+        complement=False,
     )
 
     ast = ast_from_string('[a-]')
-    assert ast == Or(
+    assert ast == Bracket(
         Char('a'),
         Char('-'),
+        complement=False,
     )
 
     ast = ast_from_string('[-a-]')
-    assert ast == Or(
+    assert ast == Bracket(
         Char('-'),
         Char('a'),
         Char('-'),
+        complement=False,
     )
 
 
 def test_parser_bracket_complement():
     ast = ast_from_string('[^-ac-d-]')
-    assert ast == NotChars(
+    assert ast == Bracket(
         Char('-'),
         Char('a'),
         CharRange(start='c', end='d'),
         Char('-'),
+        complement=True,
     )
 
 
@@ -354,9 +360,24 @@ def test_match_begin_constant():
 
 
 def test_match_begin_predefined_range():
-    # MT('\w*', 'af04_b-', 6)   # FIXME: it takes 10s to compile!!!
-    MT('\w', 'a', 1)
-    MT('\s*', ' \t\n\r　', 4)
+    MT(r'\w*', 'af04_b-', 6)
+    MT(r'\W*', '-$#@#@.0a', 7)
+    MT(r'[\W]*', '-$#@#@.0a', 7)
+    MT(r'[\W\w]*', 'si3909*($%^%^.=)(*', 18)
+    MT(r'\d*', '340.4', 3)
+    MT(r'\s', 'a', -1)
+    MT(r'\s', '　', -1)
+    MT(r'\s*', ' \t\n\r　', 4)
+
+
+def test_match_begin_large_range():
+    max_cp = ord(MAX_CHAR)
+    min_cp = ord(MIN_CHAR)
+    string = ''.join(chr(cp) for cp in range(min_cp, max_cp, max_cp // 10000))
+    MT(
+        r'[\U{:08x}-\U{:08x}]*'.format(min_cp, max_cp - 1),
+        string, len(string)
+    )
 
 
 def test_match_full():

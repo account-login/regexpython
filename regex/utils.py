@@ -6,6 +6,13 @@ def make_serial():
     return lambda: next(gen)
 
 
+def repr_range(start, end):
+    if start == end:
+        return repr(start)[1:-1]
+    else:
+        return '{}-{}'.format(*map(lambda x: repr(x)[1:-1], (start, end)))
+
+
 class BufferedGen:
     def __init__(self, gen):
         self.gen = gen

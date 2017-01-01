@@ -1,5 +1,4 @@
 from regex.parser import ast_from_string
-from regex.tokenizer import Token
 from regex.statemachine import ast_to_nfa, DfaState
 
 
@@ -38,8 +37,7 @@ class Regex:
 
         assert dfa is not None
         if not dfa.is_end():
-            dfa = dfa.follow(Token.END())
-            if dfa is not None and dfa.is_end():
+            if dfa.is_dollar_end():
                 last_match = i
 
         return last_match + 1
