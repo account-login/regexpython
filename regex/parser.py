@@ -228,7 +228,11 @@ class Bracket(BaseNode):
         super().__init__(*children)
         self.complement = complement
 
-    # TODO: _node_label()
+    def _node_label(self):
+        ret = self.__class__.__name__
+        if self.complement:
+            ret += '^'
+        return ret
 
     def __eq__(self, other):
         return super().__eq__(other) and self.complement is other.complement
