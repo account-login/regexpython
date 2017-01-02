@@ -1,2 +1,5 @@
 python-targets:
   - 3
+pylint:
+  options:
+    ignored-classes: regex.tokenizer.Token
