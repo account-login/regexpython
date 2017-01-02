@@ -2,6 +2,10 @@
 
 Regular expression engine in Python.
 
+[![Build Status](https://travis-ci.org/account-login/regexpython.svg?branch=master)](https://travis-ci.org/account-login/regexpython)
+[![codecov](https://codecov.io/gh/account-login/regexpython/branch/master/graph/badge.svg)](https://codecov.io/gh/account-login/regexpython)
+[![Code Climate](https://codeclimate.com/github/account-login/regexpython/badges/gpa.svg)](https://codeclimate.com/github/account-login/regexpython)
+
 
 ## Feature implenmented
 
