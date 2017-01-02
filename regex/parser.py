@@ -149,8 +149,7 @@ def parse_exp(tokens: TokenGen):
 
 def parse(tokens: TokenGen):
     exp = parse_exp(tokens)
-    tok = tokens.peek()
-    assert tok.type is Token.EOF
+    assert tokens.peek().type is Token.EOF
     return exp
 
 
@@ -166,9 +165,9 @@ class BaseNode:
         """
         self.children = children
 
-    def __eq__(self, other):
+    def __eq__(self, other: 'BaseNode'):
         if not isinstance(other, BaseNode):
-            return False
+            raise TypeError('uncomparable types: BaseNode vs {}'.format(other.__class__.__name__))
         else:
             return (self.__class__ is other.__class__
                     and self.children == other.children)
@@ -204,13 +203,13 @@ class Char(BaseNode):
 
 
 class CharRange(BaseNode):
-    def __init__(self, *args, start=None, end=None):
-        assert len(args) == 0
-        super().__init__(*args)
+    def __init__(self, *, start=None, end=None):
         for ch in (start, end):
             assert isinstance(ch, str) and len(ch) == 1
         if ord(end) < ord(start):
             raise BadRange('reversed range')
+
+        super().__init__()
         self.start, self.end = start, end
 
     def __eq__(self, other):

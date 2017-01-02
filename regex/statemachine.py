@@ -147,7 +147,6 @@ class DfaState:
         """
         self.rangemap = RangeMap()
         self.set_to_state = set_to_state
-        self.end = end
         self.states = set()
         self.is_end = None
         self.is_dollar_end = None
@@ -174,6 +173,7 @@ class DfaState:
             dfa_state = cls(set_to_state, end)
             dfa_state.states = q.pop()
 
+            # setup rangemap
             for nfa in dfa_state.states:    # type: NfaState
                 if nfa.char is not None:
                     # nfa.char may be Token.BEGIN or Token.END
@@ -183,14 +183,12 @@ class DfaState:
                     for r in nfa.charset.get_true_ranges():
                         dfa_state.rangemap.add_range(r.start, r.end, {nfa.to})
 
-            dfa_state.freeze()  # convert set to frozenset in order to work with hashtable
+            # expand nfas with ε_closure,
+            # and convert set to frozenset in order to work with hashtable
+            dfa_state.freeze()
             set_to_state[dfa_state.states] = dfa_state
 
-            for r in dfa_state.rangemap.get_ranges():
-                nfas = r.value
-                if nfas and nfas not in set_to_state:
-                    q.append(nfas)
-
+            # some additional properties
             dfa_state.is_end = end in dfa_state.states
             dfa_state.is_dollar_end = end in ε_closure(dfa_state.states, extra={Token.END()})
 
@@ -200,6 +198,12 @@ class DfaState:
                 # both Token.BEGIN and Token.END should be considered epsilon
                 start_dfa.match_empty = end in ε_closure(
                     start_dfa.states, extra={Token.BEGIN(), Token.END()})
+
+            # queue next dfa
+            for r in dfa_state.rangemap.get_ranges():
+                nfas = r.value
+                if nfas and nfas not in set_to_state:
+                    q.append(nfas)
 
         assert start_dfa.match_empty is not None
         return start_dfa

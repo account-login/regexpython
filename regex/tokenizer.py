@@ -4,10 +4,7 @@ from regex.errors import IllegalEscape
 
 class TokenMeta(type):
     def __new__(metacls, name, bases, namespaces):
-        sub_types = set()
-        for attr, value in namespaces.items():
-            if value == ():
-                sub_types.add(attr)
+        sub_types = set(attr for attr, value in namespaces.items() if value == ())
         for attr in sub_types:
             del namespaces[attr]
 
@@ -67,11 +64,7 @@ def read_escape(chars: BufferedGen, in_bracket: bool) -> Token:
     }
 
     def check_hex_digits(digits):
-        for d in digits:
-            if d not in '0123456789abcdef':
-                return False
-        else:
-            return True
+        return all(ch in '0123456789abcdef' for ch in digits)
 
     ch = chars.get()
 
@@ -143,7 +136,7 @@ def tokenize(chars: BufferedGen):
                     in_bracket = False
                     tok = Token.RBRACKET()
             elif ch == '^':
-                if prev.type == Token.LBRACKET:
+                if prev.type is Token.LBRACKET:
                     tok = Token.NOT()
                 else:
                     tok = Token.CHAR(ch)
