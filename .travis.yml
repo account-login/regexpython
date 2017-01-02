@@ -1,0 +1,29 @@
+language: python
+python:
+  - "3.4"
+  - "3.5"
+  - "3.6"
+
+addons:
+  apt:
+    packages:
+      - graphviz
+  code_climate:
+    repo_token: 4a9bcfcaa81118285afa92cb0e97c2b733731ee81421875b059839995933d1e7
+
+# Ubuntu 14.04 Trusty support
+sudo: required
+dist: trusty
+
+# command to install dependencies
+install:
+  - pip install -r requirements.txt
+  - pip install pytest-sugar
+  - pip install pytest-cov
+  - pip install coveralls
+  - pip install codecov
+  - pip install codeclimate-test-reporter
+
+# command to run tests
+script:
+  pytest -s --verbose --cov=regex regex/tests/ && codecov && coveralls && codeclimate-test-reporter
