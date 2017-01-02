@@ -7,7 +7,7 @@ Regular expression engine in Python.
 [![Code Climate](https://codeclimate.com/github/account-login/regexpython/badges/gpa.svg)](https://codeclimate.com/github/account-login/regexpython)
 
 
-## Feature implenmented
+## Features implenmented
 
 - unicode support
 - dot `.`
@@ -32,7 +32,7 @@ Regular expression engine in Python.
 TBA
 
 
-## Feature not implemented
+## Features not implemented
 
 - grouping by `(...)`
 - non-greedy qualifier `*?`, `+?`, `??`, `x{a,b}?`
