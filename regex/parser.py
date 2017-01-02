@@ -198,8 +198,10 @@ class Char(BaseNode):
         assert isinstance(self.children[0], (str, Token))
         if isinstance(self.children[0], str):
             return repr_range(self.children[0], self.children[0])
+        elif isinstance(self.children[0], Token):
+            return self.children[0].type.__name__
         else:
-            return str(self.children[0])
+            assert not 'possible'
 
 
 class CharRange(BaseNode):

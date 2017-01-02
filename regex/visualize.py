@@ -3,6 +3,7 @@ from graphviz import Digraph
 
 from regex.statemachine import NfaState, NfaPair, DfaState
 from regex.parser import BaseNode, Cat
+from regex.tokenizer import Token
 from regex.utils import make_serial, repr_range
 
 
@@ -94,13 +95,20 @@ def nfa_to_gv(nfa_pair: NfaPair, labelize=True):
         seen[node] = name
 
         if node.to is not None:
-            sub_name = seen.get(node.to) or rec(node.to)
             if node.char is not None:
-                g.edge(name, sub_name, repr_range(node.char, node.char))
+                if isinstance(node.char, str):
+                    label = repr_range(node.char, node.char)
+                elif isinstance(node.char, Token):
+                    label = node.char.__class__.__name__
+                else:
+                    assert not 'possible'
             elif node.charset is not None:
-                g.edge(name, sub_name, str(node.charset))
+                label = str(node.charset)
             else:
                 assert not 'possible'
+
+            sub_name = seen.get(node.to) or rec(node.to)
+            g.edge(name, sub_name, label)
 
         for to in node.epsilon:
             sub_name = seen.get(to) or rec(to)
@@ -124,6 +132,8 @@ def dfa_to_gv(dfa_start: DfaState):
             node_opts = dict(color='black', fontcolor='white')
         elif dfa.is_end:
             node_opts = dict(color='green', fontcolor='white')
+        elif dfa.is_dollar_end:
+            node_opts = dict(color='orange')
         else:
             node_opts = dict()
         g.node(name, ','.join(labels), **node_opts)
