@@ -111,5 +111,5 @@ def test_tokenizer_escape_wsd():
 
 
 def test_tokenizer_escape_undefined():
-    tokens = simplified_tokens('\\q\\e\\y\\i')
-    assert tokens == list('qeyi')
+    tokens = simplified_tokens('\\q\\e\\y\\i\\*\\?\\[')
+    assert tokens == list('qeyi*?[')
