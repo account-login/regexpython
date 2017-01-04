@@ -141,7 +141,7 @@ def ast_to_nfa(node: BaseNode) -> NfaPair:
 
 
 class DfaState:
-    def __init__(self, set_to_state, end):
+    def __init__(self, set_to_state):
         """
         :type set_to_state: dict[set[NfaState], DfaState]
         """
@@ -170,7 +170,7 @@ class DfaState:
 
         q = [ ε_closure({start}, extra={Token.BEGIN()}) ]
         while q:
-            dfa_state = cls(set_to_state, end)
+            dfa_state = cls(set_to_state)
             dfa_state.states = q.pop()
 
             # setup rangemap

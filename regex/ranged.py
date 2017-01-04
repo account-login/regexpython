@@ -71,7 +71,7 @@ class RangeMap:
         if left is right is not None:
             assert left.start < start and right.end > end
             mid_data = RangeMapItem(start, end, left.value.union(value))
-            right_data = RangeMapItem(chr(ord(end) + 1), right.end, set(right.value))
+            right_data = RangeMapItem(chr(ord(end) + 1), right.end, right.value)
             left.end = chr(ord(start) - 1)
             self.sl.insert(mid_data)
             self.sl.insert(right_data)
